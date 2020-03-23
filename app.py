@@ -7,7 +7,6 @@ import geopandas as gpd
 import statsmodels.api as sm
 from patsy import dmatrices
 # http://10.188.166.68:8501
-p = '/Users/juanjosevidal/Google Drive/Projects/Covid-19/'
 
 def predict_model(ca,day):
     pred = [1] + list(np.repeat(0,18)) + [day]
@@ -56,20 +55,20 @@ def plot_ccaa_curve(ca):
     st.pyplot()
 
 # Data wrangling
-data = pd.read_excel(p+'data/Covid-19_data.xlsx')
+data = pd.read_excel('Covid-19_data.xlsx')
 data['day'] = [x.day for x in data['dia']]
 rel = pd.read_excel(p + 'maps/Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
 ccaa_dict = {c:i for c,i in zip(rel['CCAA_Name'],rel['CCAA'])}
 n_prov = len(ccaa_dict)
 
-pob = pd.read_excel(p+'data/Covid-19_data.xlsx',sheet_name='INE_Poblacion')
+pob = pd.read_excel('Covid-19_data.xlsx',sheet_name='INE_Poblacion')
 data_pob = data.merge(pob,on=['CCAA','CCAA_Name'],how='left')
 data_pob['pct_casos_pob'] = data_pob['total_casos']/data_pob['pob']
 data_pob['pct_death_casos'] = data_pob['deaths']/data_pob['total_casos']
 data_pob['pct_death_pob'] = data_pob['deaths']/data_pob['pob']
 
 st.title('Predicción de número de casos o fallecimientos a corto plazo')
- 
+
 # Model
 response = st.selectbox('Respuesta',['deaths', 'total_casos'])
 data_model = data_pob[['day','CCAA',response]].copy()
