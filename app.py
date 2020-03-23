@@ -50,7 +50,7 @@ def plot_ccaa_curve(ca):
     for spine in ('top', 'right', 'bottom', 'left'):
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
-    plt.savefig(p+'export/Evolution_Spain.png')
+    #plt.savefig(p+'export/Evolution_Spain.png')
     st.pyplot()
 
 # Data wrangling
