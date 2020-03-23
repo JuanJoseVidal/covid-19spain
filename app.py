@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import datetime
 import matplotlib.pyplot as plt
-import geopandas as gpd
 import statsmodels.api as sm
 from patsy import dmatrices
 # http://10.188.166.68:8501
