@@ -56,7 +56,7 @@ def plot_ccaa_curve(ca):
 # Data wrangling
 data = pd.read_excel('Covid-19_data.xlsx')
 data['day'] = [x.day for x in data['dia']]
-rel = pd.read_excel('maps/Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
+rel = pd.read_excel('Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
 ccaa_dict = {c:i for c,i in zip(rel['CCAA_Name'],rel['CCAA'])}
 n_prov = len(ccaa_dict)
 
