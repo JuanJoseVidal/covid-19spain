@@ -14,13 +14,11 @@ def predict_model(ca,day):
     pred[ccaa_dict[ca]-1] = 1
     return float(res.predict(pred))
 
-
 def plot_ccaa_curve(ca):
     data_plot = data.query(f'CCAA_Name=="{ca}"')[['day',response]]
     response_fut = list(data_plot[response]) + list(np.repeat(None,5))
     days_fut = list(data_plot['day']) + list(range(data_plot['day'].max()+1,data_plot['day'].max()+6))
     predict_fut = [predict_model(ca,d) for d in days_fut]
-
 
     max_days = len(days_fut)
     min_day = datetime.date(2020,3,min(days_fut))
@@ -35,14 +33,8 @@ def plot_ccaa_curve(ca):
     ax.plot(days_fut_fmt, predict_fut, 'b', alpha=0.5, lw=2, label='Predicted')
     ax.plot(days_fut_fmt, response_fut, 'r', alpha=0.5, lw=2, label='Observed')
 
-
     ax.set_xlabel('Día')
     ax.set_ylabel(response)
-    #ax.set_ylim(0,1.1)
-    #ax.set_ylim(0,0.001)
-    #ax.set_xlim(0,20)
-    #loc = plticker.MultipleLocator(base=10) # this locator puts ticks at regular intervals
-    #ax.xaxis.set_major_locator(loc)
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=2,rotation=45)
     plt.xticks(ha='right')
@@ -52,8 +44,8 @@ def plot_ccaa_curve(ca):
     for spine in ('top', 'right', 'bottom', 'left'):
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
-    #plt.savefig(p+'export/Evolution_Spain.png')
     st.pyplot()
+    st.write(pd.DataFrame({'Day':days_fut_fmt,'Observed':response_fut,'Predictions':[int(p) for p in predict_fut]}))
 
 # The SIR model differential equations.
 def deriv(y, t, N, beta, gamma):
@@ -62,7 +54,6 @@ def deriv(y, t, N, beta, gamma):
     dIdt = beta * S * I / N - gamma * I
     dRdt = gamma * I
     return dSdt, dIdt, dRdt
-
 
 # Data wrangling
 @st.cache
@@ -152,7 +143,7 @@ if section_ind=='GLM: Estudio a corto plazo':
     res = mod.fit()
     ca_name_short = st.selectbox('CCAA',list(ccaa_dict.keys()),key='short')
     plot_ccaa_curve(ca_name_short)
-
+    
 if section_ind=='SIR: Estudio a largo plazo':
     st.title('Modelos SIR: Estudio a largo plazo')
     st.write('''En este apartado se estudia la evolución a largo plazo a nivel de país o CCAA, según interese, y se ajusta el parámetro
@@ -174,7 +165,7 @@ if section_ind=='SIR: Estudio a largo plazo':
         N = data_pob_agg['pob'][0]
         # Initial number of infected and recovered individuals, I0 and R0.
         I0 = data_pob_agg.loc[data_pob_agg['dia']==data_pob_agg['dia'].min()]['total_casos'][0]
-        ca_name_long = 'Spain'
+        ca_name_long = 'España'
 
     else:
         data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
@@ -248,6 +239,9 @@ if section_ind=='SIR: Estudio a largo plazo':
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the COVID-19'.format(ca_name_long))
     st.pyplot()
+
+    val_inf, idx_inf = max((val, idx) for (idx, val) in enumerate(I))
+    st.write('Se espera que en {}, el {} se alcance el pico máximo de infectados con un {:.2%} de la población afectada.'.format(ca_name_long,days_str[idx_inf],val_inf/N))
 
 if section_ind=='Documentación':
     st.title('Documentación')
