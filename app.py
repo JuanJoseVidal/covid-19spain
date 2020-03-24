@@ -80,12 +80,13 @@ def load_data():
     data_pob['pct_death_pob'] = data_pob['deaths']/data_pob['pob']
     return data, rel, ccaa_dict, n_prov, pob, data_pob
 
-st.sidebar.title('Cuadro de mando')
-section_ind = st.sidebar.radio('Sección',['Introducción','Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
+st.sidebar.title('Índice')
+section_ind = st.sidebar.radio('',['Introducción','Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
 if section_ind=='Introducción':
+    st.title('Proyección sobre la evolución de la incidencia del virus COVID-19')
     st.markdown('''
-    # Motivación
+    ## Motivación
     Ante la situación de alarma actual en relación al denominado COVID-19, se han
     puesto en marcha diferentes iniciativas que tratan de anticipar algunos de los efectos
     negativos que la pandemia actual genera, de esta manera es posible planificar
@@ -101,7 +102,7 @@ if section_ind=='Introducción':
     ''')
 
     st.markdown('''
-    # Introducción Metodológica
+    ## Introducción Metodológica
     Existen diferentes maneras de afrontar este tipo de problemas: (i) con modelos
     predictivos, haciendo uso de técnicas estadísticas como los denominados GLM
     (Modelo Lineal Generalizado); (ii) con modelos epidemiológicos establecidos, como
@@ -299,5 +300,6 @@ if section_ind=='Acerca del proyecto':
     ''')
     st.markdown('''**Francisco Gabriel Morillas Jurado**  
     PDI Titular en la Universitat de València, Facultat d'Economia.  
+    LinkedIn: [Francisco Gabriel Morillas Jurado](https://www.linkedin.com/in/fracisco-gabriel-morillas-jurado-4a5290a6/?originalSubdomain=es)  
     Mail: [francisco.morillas@uv.es](mailto:francisco.morillas@uv.es)  
     ''')
