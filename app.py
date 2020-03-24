@@ -81,35 +81,61 @@ def load_data():
     return data, rel, ccaa_dict, n_prov, pob, data_pob
 
 st.sidebar.title('Cuadro de mando')
-section_ind = st.sidebar.selectbox('Sección',['Acerca del proyecto','Documentación','Series temporales: Predicción a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo'])
+section_ind = st.sidebar.radio('Sección',['Introducción','Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
-if section_ind=='Acerca del proyecto':
-    st.title('Acerca del proyecto')
-    '''Este es un proyecto para monitorizar y predecir la evolución del COVID-19 en España hecho por Juan José Vidal y Francisco Gabriel Morillas.
-    Los datos han sido recopilados a partir de los informes de actualización del Ministerio de Sanidad.
-    El software utilizado mayoritariamente Python. Los datos los recogemos en Excel, los manipulamos y predecimos con Python,
-    presentamos el dashboard con Streamlit y publicamos la app en Heroku.
-    '''
-
-    st.title('Información sobre los autores')
-    st.markdown('''**Juan José Vidal Llana**  
-    Senior Pricing Analyst en Allianz España y Freelancer Strategy Consultant.  
-    LinkedIn: [Juan José Vidal Llana](https://www.linkedin.com/in/juan-jose-vidal-llana/)  
-    Mail: [xenxovidal@gmail.com](mailto:xenxovidal@gmail.com)  
-    **Francisco Gabriel Morillas Jurado**  
-    PDI Titular en la Universitat de València, Facultat d'Economia.  
-    Mail: [francisco.morillas@uv.es](mailto:francisco.morillas@uv.es)  
+if section_ind=='Introducción':
+    st.markdown('''
+    # Motivación
+    Ante la situación de alarma actual en relación al denominado COVID-19, se han
+    puesto en marcha diferentes iniciativas que tratan de anticipar algunos de los efectos
+    negativos que la pandemia actual genera, de esta manera es posible planificar
+    diferentes escenarios y tomar decisiones con el objetivo de paliar las consecuencias
+    más negativas de esta enfermedad. Así, el CEMat se encarga de coordinar las
+    iniciativas de la comunidad matemática española relacionadas con la crisis creada
+    por el COVID-19. Así, un grupo amplio de investigadores trata de encontrar una
+    respuesta al problema actual de salud pública mencionado.  
+    En particular, desde este grupo de investigación de la Facultat d’Economia de la
+    Universitat de València, también tratamos de realizar una pequeña contribución,
+    teniendo en cuenta las dificultades que el problema analizado presenta y que, por
+    tanto, limita la respuesta de los diferentes modelos matemáticos que se utilizan.
     ''')
-if section_ind=='Documentación':
-    st.title('Documentación')
-    st.write('Documentación del proyecto')
 
-if section_ind=='Series temporales: Predicción a corto plazo':
-    st.title('Series temporales: Predicción a corto plazo')
+    st.markdown('''
+    # Introducción Metodológica
+    Existen diferentes maneras de afrontar este tipo de problemas: (i) con modelos
+    predictivos, haciendo uso de técnicas estadísticas como los denominados GLM
+    (Modelo Lineal Generalizado); (ii) con modelos epidemiológicos establecidos, como
+    los denominados SIR (Susceptibles-Infectados-Recuperados) y otros modelos
+    derivados de este; y, (iii) técnicas de Series Temporales, en las que se analiza una o
+    más variables de interés y se establece una relación estructural de evolución temporal
+    que se asume ‘persistente’ en el tiempo. (iv) Por supuesto, existen otros enfoques
+    pero he pasado a describir los más utilizados actualmente.  
+    El grupo de investigación está trabajando en los tres tipos mencionados (i) a (iii).
+    ''')  
+    st.markdown('''
+    ## Frecuencia de actualización del análisis
+    Los resultados se amplían diariamente con los valores observados y se recalibran los
+    parámetros del modelo y los ajustes utilizados.
+    ''')
+    st.markdown('''
+    ## Horizonte de predicción y variables analizadas
+    Las estimaciones son útiles en el corto plazo (1-3 días), las variables analizadas son
+    el número de fallecidos, y el número de ingresos en UCI, para el total acumulado en
+    el conjunto del territorio nacional.
+    ''')    
+    st.markdown('''
+    ## Datos y Fuentes de Información
+    Los datos utilizados son los publicados por el Gobierno Español, aunque en la fase
+    inicial se utilizaron los datos recopilados y depurados por el grupo de trabajo
+    Datadista (Github) y los proporcionados por el Johns Hopkins CSSE.
+    ''')
+
+if section_ind=='Series temporales: Estudio a corto plazo':
+    st.title('Series temporales: Estudio a corto plazo')
     st.write('Estudio de Fran')
 
 if section_ind=='GLM: Estudio a corto plazo':
-    st.title('Modelos GLM: Predicción a corto plazo')
+    st.title('Modelos GLM: Estudio a corto plazo')
     st.write('''En este apartado se estudia la evolución a corto plazo a nivel de CCAA según un modelo GLM Poisson con el día y la
     comunidad autónoma como únicos factores de riesgo. Hay que tener en cuenta que este modelo predecirá bien los próximos días pero
     no lo hará para un largo plazo.
@@ -123,15 +149,11 @@ if section_ind=='GLM: Estudio a corto plazo':
 
     mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
     res = mod.fit()
-
-
     ca_name_short = st.selectbox('CCAA',list(ccaa_dict.keys()),key='short')
     plot_ccaa_curve(ca_name_short)
 
-
-
 if section_ind=='SIR: Estudio a largo plazo':
-    st.title('Modelos SIR: Predicción a largo plazo')
+    st.title('Modelos SIR: Estudio a largo plazo')
     st.write('''En este apartado se estudia la evolución a largo plazo a nivel de país o CCAA, según interese, y se ajusta el parámetro
     de contagio correspondiente al modelo SIR explicado en el apartado Documentación cada vez que se selecciona un periodo. Este modelo
     intenta predecir el pico de casos a largo terminio teniendo en cuenta una recuperación e inmunidad posterior por la sociedad.
@@ -223,3 +245,41 @@ if section_ind=='SIR: Estudio a largo plazo':
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the COVID-19'.format(ca_name_long))
     st.pyplot()
+
+if section_ind=='Documentación':
+    st.title('Documentación')
+    st.markdown('''
+    En relación a la metodología utilizada en las **series temporales** se ha seguido el siguiente esquema:  
+
+    1. Se consideran Tasas de Variación entre valores diarios consecutivos.
+    2. Para estimar la tendencia se inicia el proceso mediante una media geométrica
+    móvil.
+    3. La estimación de la tendencia se realiza mediante un ajuste funcional de la
+    serie obtenida en el paso anterior. En este caso logarítmico.
+    4. Se utiliza la estimación anterior para predecir los valores en momentos
+    futuros.
+    5. Con los valores de tendencia y los valores observados, mediante
+    encadenamiento, se obtienen los valores que conforman la predicción.
+    6. La estimación de los errores se basa en el error del ajuste funcional y no
+    aparece en este documento.
+    7. La generación de escenarios alternativos y plausibles se está diseñando y
+    ajustando para que pueda ser utilizado en la práctica.
+    ''')
+
+if section_ind=='Acerca del proyecto':
+    st.title('Acerca del proyecto')
+    '''Este es un proyecto para monitorizar y predecir la evolución del COVID-19 en España desarrollado por Juan José Vidal y Francisco Gabriel Morillas.
+    Los datos han sido recopilados a partir de los informes de actualización del Ministerio de Sanidad.
+    El software utilizado mayoritariamente Python. Los datos los recogemos en Excel, los manipulamos y predecimos con Python,
+    presentamos el dashboard con Streamlit y publicamos la app en Heroku.
+    '''
+
+    st.title('Información sobre los autores')
+    st.markdown('''**Juan José Vidal Llana**  
+    Senior Pricing Analyst en Allianz España y Freelancer Strategy Consultant.  
+    LinkedIn: [Juan José Vidal Llana](https://www.linkedin.com/in/juan-jose-vidal-llana/)  
+    Mail: [xenxovidal@gmail.com](mailto:xenxovidal@gmail.com)  
+    **Francisco Gabriel Morillas Jurado**  
+    PDI Titular en la Universitat de València, Facultat d'Economia.  
+    Mail: [francisco.morillas@uv.es](mailto:francisco.morillas@uv.es)  
+    ''')
