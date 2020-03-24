@@ -138,7 +138,7 @@ if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
     st.write('''En este apartado se estudia la evolución a corto plazo a nivel de CCAA según un modelo GLM Poisson con el día y la
     comunidad autónoma como únicos factores de riesgo. Hay que tener en cuenta que este modelo predecirá bien los próximos días pero
-    no lo hará para un largo plazo.
+    no lo hará para un largo plazo, ya que en ningún momento se tiene en cuenta una futura bajada del contagio.
     ''')
     data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
     # Model
@@ -158,41 +158,57 @@ if section_ind=='SIR: Estudio a largo plazo':
     de contagio correspondiente al modelo SIR explicado en el apartado Documentación cada vez que se selecciona un periodo. Este modelo
     intenta predecir el pico de casos a largo terminio teniendo en cuenta una recuperación e inmunidad posterior por la sociedad.
     ''')
-    data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-    ca_name_long = st.selectbox('CCAA',list(ccaa_dict.keys()),key='long')
-    ca_number = ccaa_dict[ca_name_long]
-    ca_name = rel.loc[rel['CCAA']==ca_number].reset_index()['CCAA_Name'][0]
-    data_model = data_pob.loc[data_pob['CCAA']==ca_number].reset_index()[['CCAA', 'total_casos', 'pct_death_pob', 'pob', 'dia']]
+    
+    all_ccaa = st.checkbox('Todo el país / CCAA')
+
     max_days = 201
+
+    if all_ccaa:
+        data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
+        data_pob_agg = data_pob[['dia', 'total_casos','deaths', 'pob']].groupby('dia').agg('sum').reset_index()
+        data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
+        observed = list(data_pob_agg['pct_death_pob']) + list(np.repeat(None,max_days-len(data_pob_agg['pct_death_pob'])))
+        n_obs = len(list(data_pob_agg['pct_death_pob']))
+        # Total population, N.
+        N = data_pob_agg['pob'][0]
+        # Initial number of infected and recovered individuals, I0 and R0.
+        I0 = data_pob_agg.loc[data_pob_agg['dia']==data_pob_agg['dia'].min()]['total_casos'][0]
+        ca_name_long = 'Spain'
+
+    else:
+        data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
+        ca_name_long = st.selectbox('CCAA',list(ccaa_dict.keys()),key='long')
+        ca_number = ccaa_dict[ca_name_long]
+        ca_name = rel.loc[rel['CCAA']==ca_number].reset_index()['CCAA_Name'][0]
+        data_model = data_pob.loc[data_pob['CCAA']==ca_number].reset_index()[['CCAA', 'total_casos', 'pct_death_pob', 'pob', 'dia']]
+        observed = list(data_model['pct_death_pob']) + list(np.repeat(None,max_days-len(data_model['pct_death_pob'])))
+        n_obs = len(list(data_model['pct_death_pob']))
+        # Total population, N.
+        N = pob.loc[pob['CCAA']==ca_number].reset_index()['pob'][0]
+        # Initial number of infected and recovered individuals, I0 and R0.
+        I0 = data_model.loc[data_model['dia']==data_model['dia'].min()]['total_casos'][0]
+
     min_day = data_pob['dia'].min()
     days = [min_day]
     for i in range(max_days-1): 
         days.append(days[i] + datetime.timedelta(days=1))
     days_str = [d.strftime('%Y-%m-%d') for d in days]
-
-    observed = list(data_model['pct_death_pob']) + list(np.repeat(None,max_days-len(data_model['pct_death_pob'])))
-
-    n_obs = len(list(data_model['pct_death_pob']))
     beta_grid = np.linspace(0.1, 0.5, 41)
+
+    R0 = 0
+    # Everyone else, S0, is susceptible to infection initially.
+    S0 = N - I0 - R0
+    # Mean recovery rate, gamma, (in 1/days).
+    gamma = 1/14
+    # A grid of time points (in days)
+    t = np.linspace(0, max_days-1, max_days)
+    # Initial conditions vector
+    y0 = S0, I0, R0
 
     rmse = []
     for b in beta_grid:
-    # Total population, N.
-        N = pob.loc[pob['CCAA']==ca_number].reset_index()['pob'][0]
-        # Initial number of infected and recovered individuals, I0 and R0.
-        I0 = data_model.loc[data_model['dia']==data_model['dia'].min()]['total_casos'][0]
-        R0 = 0
-        # Everyone else, S0, is susceptible to infection initially.
-        S0 = N - I0 - R0
-        # Contact rate, beta, and mean recovery rate, gamma, (in 1/days).
+        # Contact rate, beta
         beta = b
-        gamma = 1/14
-        # A grid of time points (in days)
-        t = np.linspace(0, max_days-1, max_days)
-
-
-        # Initial conditions vector
-        y0 = S0, I0, R0
         # Integrate the SIR equations over the time grid, t.
         ret = odeint(deriv, y0, t, args=(N, beta, gamma))
         S, I, R = ret.T
@@ -200,22 +216,8 @@ if section_ind=='SIR: Estudio a largo plazo':
 
     val, idx = min((val, idx) for (idx, val) in enumerate(rmse))
     b_opt = beta_grid[idx]
-
-    N = pob.loc[pob['CCAA']==ca_number].reset_index()['pob'][0]
-    # Initial number of infected and recovered individuals, I0 and R0.
-    I0 = data_model.loc[data_model['dia']==data_model['dia'].min()]['total_casos'][0]
-    R0 = 0
-    # Everyone else, S0, is susceptible to infection initially.
-    S0 = N - I0 - R0
-    # Contact rate, beta, and mean recovery rate, gamma, (in 1/days).
     beta = b_opt
-    gamma = 1/14
-    # A grid of time points (in days)
-    t = np.linspace(0, max_days-1, max_days)
 
-
-    # Initial conditions vector
-    y0 = S0, I0, R0
     # Integrate the SIR equations over the time grid, t.
     ret = odeint(deriv, y0, t, args=(N, beta, gamma))
     S, I, R = ret.T
@@ -266,6 +268,21 @@ if section_ind=='Documentación':
     ajustando para que pueda ser utilizado en la práctica.
     ''')
 
+    st.markdown('''
+    En relación con los **Modelos Lineares Generalizados**, estos son una generalización flexible de la regresión lineal ordinaria 
+    que permite variables de respuesta que tienen modelos de distribución de errores distintos de una distribución normal. 
+    El GLM generaliza la regresión lineal al permitir que el modelo lineal esté relacionado con la variable de respuesta a 
+    través de una función de enlace y al permitir que la magnitud de la varianza de cada medición sea una función de su valor predicho. 
+    [+info](https://es.wikipedia.org/wiki/Modelo_lineal_generalizado)
+    ''')
+
+    st.markdown('''
+    Respecto a los **modelos SIR**, son uno de los modelos epidemiológicos más simples capaces de capturar muchas de las características 
+    típicas de los brotes epidémicos. El nombre del modelo proviene de las iniciales S (población susceptible), I (población infectada) 
+    y R (población recuperada). El modelo relaciona las variaciones las tres poblaciones (Susceptible, Infectada y Recuperada) 
+    a través de la tasa de infección y el período infeccioso promedio. [+info](https://es.wikipedia.org/wiki/Modelo_SIR)
+    ''')
+
 if section_ind=='Acerca del proyecto':
     st.title('Acerca del proyecto')
     '''Este es un proyecto para monitorizar y predecir la evolución del COVID-19 en España desarrollado por Juan José Vidal y Francisco Gabriel Morillas.
@@ -279,7 +296,8 @@ if section_ind=='Acerca del proyecto':
     Senior Pricing Analyst en Allianz España y Freelancer Strategy Consultant.  
     LinkedIn: [Juan José Vidal Llana](https://www.linkedin.com/in/juan-jose-vidal-llana/)  
     Mail: [xenxovidal@gmail.com](mailto:xenxovidal@gmail.com)  
-    **Francisco Gabriel Morillas Jurado**  
+    ''')
+    st.markdown('''**Francisco Gabriel Morillas Jurado**  
     PDI Titular en la Universitat de València, Facultat d'Economia.  
     Mail: [francisco.morillas@uv.es](mailto:francisco.morillas@uv.es)  
     ''')
