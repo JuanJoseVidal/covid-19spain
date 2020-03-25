@@ -55,6 +55,42 @@ def deriv(y, t, N, beta, gamma):
     dRdt = gamma * I
     return dSdt, dIdt, dRdt
 
+def predict_geoserie(d,remove,post_days,geom_days,day_ini):
+    if remove>0:
+        d = d[:-remove]
+    d_long = d + list(np.repeat(None,post_days))
+    
+    n_obs = len(d)
+    n_obs_long = n_obs + post_days
+    
+    days_long = [day_ini]
+    for c in range(n_obs-1 + post_days):
+        days_long.append(days_long[c] + datetime.timedelta(days=1))
+    days = days_long[:-post_days]
+    dia_count_long = list(range(1,n_obs+1+post_days))
+
+    tend_long = [np.log(d-5) for d in dia_count_long[geom_days:]]
+    tend = tend_long[:-post_days]
+
+    d_diff = [d[i]/d[i-1] for i in range(1,n_obs)]
+
+    d_geomean = [(d_diff[i]*d_diff[i+1]*d_diff[i+2]*d_diff[i+3]*d_diff[i+4])**(1/geom_days) for i in range(1,n_obs-geom_days)]
+    i_last = n_obs-geom_days
+    d_geomean.append((d_diff[i_last]*d_diff[i_last+1]*d_diff[i_last+2]*d_diff[i_last+3])**(1/(geom_days-1)))
+
+    b = sum([(t-np.mean(tend))*(g-np.mean(d_geomean)) for t,g in zip(tend,d_geomean)])/sum([(t-np.mean(tend))**2 for t,g in zip(tend,d_geomean)])
+    a = np.mean(d_geomean)-b*np.mean(tend)
+
+    mult_fut = [a + b*t for t in tend_long[(-post_days-1):-1]]
+
+    preds_fut = [d[n_obs-1]*d_geomean[-1]] + list(np.repeat(None, post_days-1))
+
+    for i in range(1,post_days):
+        preds_fut[i] = preds_fut[i-1]*mult_fut[i]
+
+    preds_fut_long = list(np.repeat(None,len(d))) + preds_fut
+    return d_long, preds_fut_long, days_long
+
 # Data wrangling
 @st.cache
 def load_data():
@@ -124,7 +160,45 @@ if section_ind=='Introducción':
 
 if section_ind=='Series temporales: Estudio a corto plazo':
     st.title('Series temporales: Estudio a corto plazo')
-    st.write('Estudio de Fran')
+    data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
+    data_pob_agg = data_pob[['dia', 'total_casos','deaths', 'pob']].groupby('dia').agg('sum').reset_index()
+    d = list(data_pob_agg['deaths'])
+    post_days = 3
+    geom_days = 5
+    day_ini = data_pob_agg['dia'].min()
+
+    d_long_0, preds_fut_long_0, days_long = predict_geoserie(d, 0, post_days, geom_days, day_ini)
+    d_long_1, preds_fut_long_1, _ = predict_geoserie(d, 1, post_days+1, geom_days, day_ini)
+    d_long_2, preds_fut_long_2, _ = predict_geoserie(d, 2, post_days+2, geom_days, day_ini)
+    d_long_3, preds_fut_long_3, _ = predict_geoserie(d, 3, post_days+3, geom_days, day_ini)
+
+    fig = plt.figure(facecolor='w',figsize=(12,9))
+    ax = fig.add_subplot(111, axisbelow=True)
+    ax.plot(days_long, d_long_0, 'black', alpha=0.5, lw=3, label='Observado hasta el {}'.format(days_long[(-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long, preds_fut_long_0, 'o-r', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long, preds_fut_long_1, 'o-b', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-1-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long, preds_fut_long_2, 'o-y', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-2-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long, preds_fut_long_3, 'o-g', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-3-post_days-1)].strftime('%Y-%m-%d')))
+    ax.set_xlabel('Día')
+    ax.set_ylabel('Fallecimientos')
+    ax.yaxis.set_tick_params(length=0)
+    ax.xaxis.set_tick_params(length=2,rotation=45)
+    plt.xticks(ha='right')
+    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
+    legend = ax.legend()
+    legend.get_frame().set_alpha(0.5)
+    for spine in ('top', 'right', 'bottom', 'left'):
+        ax.spines[spine].set_visible(False)
+    plt.title('Datos observados y predicción')
+    plt.suptitle('Número de fallecidos acumulado por día',size=20)
+    st.pyplot()
+
+    st.table(pd.DataFrame({'Día':days_long,
+                        'Observed': d_long_0,
+                        'Pred_3':[int(x) if x is not None else None for x in preds_fut_long_3],
+                        'Pred_2':[int(x) if x is not None else None for x in preds_fut_long_2],
+                        'Pred_1':[int(x) if x is not None else None for x in preds_fut_long_1],
+                        'Pred_0':[int(x) if x is not None else None for x in preds_fut_long_0]}))
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
@@ -151,7 +225,7 @@ if section_ind=='SIR: Estudio a largo plazo':
     intenta predecir el pico de casos a largo terminio teniendo en cuenta una recuperación e inmunidad posterior por la sociedad.
     ''')
     
-    all_ccaa = st.checkbox('Todo el país / CCAA')
+    all_ccaa = st.checkbox('Todo el país / CCAA', True)
 
     max_days = 201
 
