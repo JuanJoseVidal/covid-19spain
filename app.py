@@ -180,7 +180,7 @@ if section_ind=='Series temporales: Estudio a corto plazo':
     data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
     data_pob_agg = data_pob[['dia', 'total_casos','deaths', 'pob']].groupby('dia').agg('sum').reset_index()
     d = list(data_pob_agg['deaths'])
-    post_days = 3
+    post_days = 5
     geom_days = 5
     day_ini = data_pob_agg['dia'].min()
 
@@ -237,6 +237,34 @@ if section_ind=='Series temporales: Estudio a corto plazo':
                         'Pred_3_error':"{:.2%}",
                         'Pred_2_error':"{:.2%}",
                         'Pred_1_error':"{:.2%}"}, na_rep=""))
+    st.markdown('## Con suavizado')
+    results_smt_aux = pd.DataFrame({'Día': [d_f.strftime('%Y-%m-%d') for d_f in days_long],
+                        'Observado': d_long_0,
+                        'Pred_3':[int(x) if x is not None else None for x in preds_fut_long_3],
+                        'Pred_2_smooth':(results['Pred_3']+results['Pred_2'])/2,
+                        'Pred_1_smooth':(results['Pred_3']+results['Pred_2']+results['Pred_1'])/3,
+                        'Pred_0_smooth':(results['Pred_3']+results['Pred_2']+results['Pred_1']+results['Pred_0'])/4})
+    results_smt = results_smt_aux.where(pd.notnull(results_smt_aux), None)
+
+    results_fmt_smt = pd.DataFrame({'Día': [d_f.strftime('%Y-%m-%d') for d_f in days_long],
+                            'Observado': remove_na(d_long_0),
+                            'Pred_3':remove_na([int(x) if x is not None else None for x in preds_fut_long_3]),
+                            'Pred_2_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_2_smooth']]),
+                            'Pred_1_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_1_smooth']]),
+                            'Pred_0_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_0_smooth']])})
+
+    st.table(results_fmt_smt[(-post_days-3):].style.applymap(color_red,subset=['Pred_0_smooth','Pred_1_smooth','Pred_2_smooth','Pred_3']))
+
+    diffs_smt = pd.DataFrame({'Día':results_smt['Día'],
+                        'Observado': d_long_0,
+                        'Pred_3_smooth_error':(results_smt['Observado']-results_smt['Pred_3'])/results_smt['Pred_3'],
+                        'Pred_2_smooth_error':(results_smt['Observado']-results_smt['Pred_2_smooth'])/results_smt['Pred_2_smooth'],
+                        'Pred_1_smooth_error':(results_smt['Observado']-results_smt['Pred_1_smooth'])/results_smt['Pred_1_smooth']})
+
+    st.table(diffs_smt[(-post_days-3):-post_days].reset_index().drop('index',axis=1).style.applymap(color_red,subset=['Pred_1_smooth_error','Pred_2_smooth_error','Pred_3_smooth_error']).format({'Observado':"{:.0f}",
+                        'Pred_3_smooth_error':"{:.2%}",
+                        'Pred_2_smooth_error':"{:.2%}",
+                        'Pred_1_smooth_error':"{:.2%}"}, na_rep=""))
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
