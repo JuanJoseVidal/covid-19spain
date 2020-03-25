@@ -9,6 +9,22 @@ import statsmodels.api as sm
 from scipy.integrate import odeint
 from patsy import dmatrices
 
+# Data wrangling
+@st.cache
+def load_data():
+    data = pd.read_excel('data/Covid-19_data.xlsx')
+    data['day'] = [x.day for x in data['dia']]
+    rel = pd.read_excel('data/Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
+    ccaa_dict = {c:i for c,i in zip(rel['CCAA_Name'],rel['CCAA'])}
+    n_prov = len(ccaa_dict)
+
+    pob = pd.read_excel('data/Covid-19_data.xlsx',sheet_name='INE_Poblacion')
+    data_pob = data.merge(pob,on=['CCAA','CCAA_Name'],how='left')
+    data_pob['pct_casos_pob'] = data_pob['total_casos']/data_pob['pob']
+    data_pob['pct_death_casos'] = data_pob['deaths']/data_pob['total_casos']
+    data_pob['pct_death_pob'] = data_pob['deaths']/data_pob['pob']
+    return data, rel, ccaa_dict, n_prov, pob, data_pob
+
 def predict_model(ca,day):
     pred = [1] + list(np.repeat(0,18)) + [day]
     pred[ccaa_dict[ca]-1] = 1
@@ -27,7 +43,6 @@ def plot_ccaa_curve(ca):
         days.append(days[i] + datetime.timedelta(days=1))
     days_fut_fmt = [d.strftime('%Y-%m-%d') for d in days]
 
-    # Plot the data on three separate curves for S(t), I(t) and R(t)
     fig = plt.figure(facecolor='w',figsize=(12,9))
     ax = fig.add_subplot(111, axisbelow=True)
     ax.plot(days_fut_fmt, predict_fut, 'b', alpha=0.5, lw=2, label='Predicted')
@@ -36,20 +51,27 @@ def plot_ccaa_curve(ca):
     ax.set_xlabel('Día')
     ax.set_ylabel(response)
     ax.yaxis.set_tick_params(length=0)
-    ax.xaxis.set_tick_params(length=2,rotation=45)
+    ax.xaxis.set_tick_params(length=0.1,rotation=45)
     plt.xticks(ha='right')
     ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
     legend = ax.legend()
-    legend.get_frame().set_alpha(0.5)
+    legend.get_frame().set_alpha(1)
     for spine in ('top', 'right', 'bottom', 'left'):
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
     st.pyplot()
-    st.table(pd.DataFrame({'Day':days_fut_fmt,'Observed':remove_na(response_fut),'Predictions':[int(p) for p in predict_fut]}))
+    st.table(pd.DataFrame({'Day':days_fut_fmt,'Observed':remove_na(response_fut),'Predictions':[int(p) for p in predict_fut]}).style.applymap(color_red,subset=['Predictions']))
+
+def color_red(val):
+    """
+    Takes a scalar and returns a string with
+    the css property `'color: red'` for negative
+    strings, black otherwise.
+    """
+    return 'color: red' 
 
 def remove_na(l):
     return [str(x) if x is not None else "" for x in l]
-
 
 # The SIR model differential equations.
 def deriv(y, t, N, beta, gamma):
@@ -94,23 +116,7 @@ def predict_geoserie(d,remove,post_days,geom_days,day_ini):
 
     preds_fut_long = list(np.repeat(None,len(d))) + preds_fut
     return d_long, preds_fut_long, days_long
-
-# Data wrangling
-@st.cache
-def load_data():
-    data = pd.read_excel('data/Covid-19_data.xlsx')
-    data['day'] = [x.day for x in data['dia']]
-    rel = pd.read_excel('data/Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
-    ccaa_dict = {c:i for c,i in zip(rel['CCAA_Name'],rel['CCAA'])}
-    n_prov = len(ccaa_dict)
-
-    pob = pd.read_excel('data/Covid-19_data.xlsx',sheet_name='INE_Poblacion')
-    data_pob = data.merge(pob,on=['CCAA','CCAA_Name'],how='left')
-    data_pob['pct_casos_pob'] = data_pob['total_casos']/data_pob['pob']
-    data_pob['pct_death_casos'] = data_pob['deaths']/data_pob['total_casos']
-    data_pob['pct_death_pob'] = data_pob['deaths']/data_pob['pob']
-    return data, rel, ccaa_dict, n_prov, pob, data_pob
-
+    
 st.sidebar.title('Índice')
 section_ind = st.sidebar.radio('',['Introducción','Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
@@ -209,7 +215,7 @@ if section_ind=='Series temporales: Estudio a corto plazo':
                         'Pred_3':remove_na([int(x) if x is not None else None for x in preds_fut_long_3]),
                         'Pred_2':remove_na([int(x) if x is not None else None for x in preds_fut_long_2]),
                         'Pred_1':remove_na([int(x) if x is not None else None for x in preds_fut_long_1]),
-                        'Pred_0':remove_na([int(x) if x is not None else None for x in preds_fut_long_0])}).style.applymap(color_negative_red,subset=['Pred_0','Pred_1','Pred_2','Pred_3']))
+                        'Pred_0':remove_na([int(x) if x is not None else None for x in preds_fut_long_0])}).style.applymap(color_red,subset=['Pred_0','Pred_1','Pred_2','Pred_3']))
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
