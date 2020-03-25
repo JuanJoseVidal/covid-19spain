@@ -45,7 +45,7 @@ def plot_ccaa_curve(ca):
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
     st.pyplot()
-    st.write(pd.DataFrame({'Day':days_fut_fmt,'Observed':remove_na(response_fut),'Predictions':[int(p) for p in predict_fut]}))
+    st.table(pd.DataFrame({'Day':days_fut_fmt,'Observed':remove_na(response_fut),'Predictions':[int(p) for p in predict_fut]}))
 
 def remove_na(l):
     return [str(x) if x is not None else "" for x in l]
@@ -164,6 +164,13 @@ if section_ind=='Introducción':
 
 if section_ind=='Series temporales: Estudio a corto plazo':
     st.title('Series temporales: Estudio a corto plazo')
+    st.markdown('''
+    En esta sección se presentan: el ajuste sobre la tendencia de las tasas de
+    variación; así como una comparación entre las predicciones realizadas
+    cada uno de los días previos y una tabla numérica con las diferentes predicciones
+    realizadas en días previos, utilizando la misma metodología que en la fase de
+    validación, no de calibración, y algunos de los errores estimados.
+    ''')
     data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
     data_pob_agg = data_pob[['dia', 'total_casos','deaths', 'pob']].groupby('dia').agg('sum').reset_index()
     d = list(data_pob_agg['deaths'])
@@ -202,7 +209,7 @@ if section_ind=='Series temporales: Estudio a corto plazo':
                         'Pred_3':remove_na([int(x) if x is not None else None for x in preds_fut_long_3]),
                         'Pred_2':remove_na([int(x) if x is not None else None for x in preds_fut_long_2]),
                         'Pred_1':remove_na([int(x) if x is not None else None for x in preds_fut_long_1]),
-                        'Pred_0':remove_na([int(x) if x is not None else None for x in preds_fut_long_0])}))
+                        'Pred_0':remove_na([int(x) if x is not None else None for x in preds_fut_long_0])}).style.applymap(color_negative_red,subset=['Pred_0','Pred_1','Pred_2','Pred_3']))
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
@@ -222,6 +229,7 @@ if section_ind=='GLM: Estudio a corto plazo':
     ca_name_short = st.selectbox('CCAA',list(ccaa_dict.keys()),key='short')
     plot_ccaa_curve(ca_name_short)
     
+
 if section_ind=='SIR: Estudio a largo plazo':
     st.title('Modelos SIR: Estudio a largo plazo')
     st.write('''En este apartado se estudia la evolución a largo plazo a nivel de país o CCAA, según interese, y se ajusta el parámetro
