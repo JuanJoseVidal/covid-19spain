@@ -38,14 +38,17 @@ def plot_ccaa_curve(ca):
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=2,rotation=45)
     plt.xticks(ha='right')
-    ax.grid(b=True, which='major', c='grey', lw=0.2, ls='-')
+    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
     legend = ax.legend()
     legend.get_frame().set_alpha(0.5)
     for spine in ('top', 'right', 'bottom', 'left'):
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
     st.pyplot()
-    st.write(pd.DataFrame({'Day':days_fut_fmt,'Observed':response_fut,'Predictions':[int(p) for p in predict_fut]}))
+    st.write(pd.DataFrame({'Day':days_fut_fmt,'Observed':remove_na(response_fut),'Predictions':[int(p) for p in predict_fut]}))
+
+def remove_na(l):
+    return [str(x) if x is not None else "" for x in l]
 
 # The SIR model differential equations.
 def deriv(y, t, N, beta, gamma):
@@ -193,12 +196,12 @@ if section_ind=='Series temporales: Estudio a corto plazo':
     plt.suptitle('Número de fallecidos acumulado por día',size=20)
     st.pyplot()
 
-    st.table(pd.DataFrame({'Día':[d_f.strftime('%Y-%m-%d') for d_f in days_long],
-                        'Observado': d_long_0,
-                        'Pred_3':[int(x) if x is not None else None for x in preds_fut_long_3],
-                        'Pred_2':[int(x) if x is not None else None for x in preds_fut_long_2],
-                        'Pred_1':[int(x) if x is not None else None for x in preds_fut_long_1],
-                        'Pred_0':[int(x) if x is not None else None for x in preds_fut_long_0]}))
+    st.table(pd.DataFrame({'Día':remove_na([d_f.strftime('%Y-%m-%d') for d_f in days_long]),
+                        'Observed': remove_na(d_long_0),
+                        'Pred_3':remove_na([int(x) if x is not None else None for x in preds_fut_long_3]),
+                        'Pred_2':remove_na([int(x) if x is not None else None for x in preds_fut_long_2]),
+                        'Pred_1':remove_na([int(x) if x is not None else None for x in preds_fut_long_1]),
+                        'Pred_0':remove_na([int(x) if x is not None else None for x in preds_fut_long_0])}))
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
@@ -306,7 +309,7 @@ if section_ind=='SIR: Estudio a largo plazo':
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=2,rotation=45)
     plt.xticks(ha='right')
-    ax.grid(b=True, which='major', c='grey', lw=0.2, ls='-')
+    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
     legend = ax.legend()
     legend.get_frame().set_alpha(0.5)
     for spine in ('top', 'right', 'bottom', 'left'):
