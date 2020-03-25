@@ -193,8 +193,8 @@ if section_ind=='Series temporales: Estudio a corto plazo':
     plt.suptitle('Número de fallecidos acumulado por día',size=20)
     st.pyplot()
 
-    st.table(pd.DataFrame({'Día':days_long,
-                        'Observed': d_long_0,
+    st.table(pd.DataFrame({'Día':[d_f.strftime('%Y-%m-%d') for d_f in days_long],
+                        'Observado': d_long_0,
                         'Pred_3':[int(x) if x is not None else None for x in preds_fut_long_3],
                         'Pred_2':[int(x) if x is not None else None for x in preds_fut_long_2],
                         'Pred_1':[int(x) if x is not None else None for x in preds_fut_long_1],
