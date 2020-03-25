@@ -189,13 +189,15 @@ if section_ind=='Series temporales: Estudio a corto plazo':
     d_long_2, preds_fut_long_2, _ = predict_geoserie(d, 2, post_days+2, geom_days, day_ini)
     d_long_3, preds_fut_long_3, _ = predict_geoserie(d, 3, post_days+3, geom_days, day_ini)
 
+    days_long_str = [d.strftime('%Y-%m-%d') for d in days_long]
+
     fig = plt.figure(facecolor='w',figsize=(12,9))
     ax = fig.add_subplot(111, axisbelow=True)
-    ax.plot(days_long, d_long_0, 'black', alpha=0.5, lw=3, label='Observado hasta el {}'.format(days_long[(-post_days-1)].strftime('%Y-%m-%d')))
-    ax.plot(days_long, preds_fut_long_0, 'o-r', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-post_days-1)].strftime('%Y-%m-%d')))
-    ax.plot(days_long, preds_fut_long_1, 'o-b', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-1-post_days-1)].strftime('%Y-%m-%d')))
-    ax.plot(days_long, preds_fut_long_2, 'o-y', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-2-post_days-1)].strftime('%Y-%m-%d')))
-    ax.plot(days_long, preds_fut_long_3, 'o-g', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-3-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long_str, d_long_0, 'black', alpha=0.5, lw=3, label='Observado hasta el {}'.format(days_long[(-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long_str, preds_fut_long_0, 'o-r', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long_str, preds_fut_long_1, 'o-b', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-1-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long_str, preds_fut_long_2, 'o-y', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-2-post_days-1)].strftime('%Y-%m-%d')))
+    ax.plot(days_long_str, preds_fut_long_3, 'o-g', alpha=0.5, lw=2, label='Predicción con datos hasta el {}'.format(days_long[(-3-post_days-1)].strftime('%Y-%m-%d')))
     ax.set_xlabel('Día')
     ax.set_ylabel('Fallecimientos')
     ax.yaxis.set_tick_params(length=0)
@@ -210,12 +212,31 @@ if section_ind=='Series temporales: Estudio a corto plazo':
     plt.suptitle('Número de fallecidos acumulado por día',size=20)
     st.pyplot()
 
-    st.table(pd.DataFrame({'Día':remove_na([d_f.strftime('%Y-%m-%d') for d_f in days_long]),
-                        'Observed': remove_na(d_long_0),
-                        'Pred_3':remove_na([int(x) if x is not None else None for x in preds_fut_long_3]),
-                        'Pred_2':remove_na([int(x) if x is not None else None for x in preds_fut_long_2]),
-                        'Pred_1':remove_na([int(x) if x is not None else None for x in preds_fut_long_1]),
-                        'Pred_0':remove_na([int(x) if x is not None else None for x in preds_fut_long_0])}).style.applymap(color_red,subset=['Pred_0','Pred_1','Pred_2','Pred_3']))
+    results = pd.DataFrame({'Día': [d_f.strftime('%Y-%m-%d') for d_f in days_long],
+                            'Observado': d_long_0,
+                            'Pred_3':[int(x) if x is not None else None for x in preds_fut_long_3],
+                            'Pred_2':[int(x) if x is not None else None for x in preds_fut_long_2],
+                            'Pred_1':[int(x) if x is not None else None for x in preds_fut_long_1],
+                            'Pred_0':[int(x) if x is not None else None for x in preds_fut_long_0]})
+
+    results_fmt = pd.DataFrame({'Día': [d_f.strftime('%Y-%m-%d') for d_f in days_long],
+                            'Observado': remove_na(d_long_0),
+                            'Pred_3':remove_na([int(x) if x is not None else None for x in preds_fut_long_3]),
+                            'Pred_2':remove_na([int(x) if x is not None else None for x in preds_fut_long_2]),
+                            'Pred_1':remove_na([int(x) if x is not None else None for x in preds_fut_long_1]),
+                            'Pred_0':remove_na([int(x) if x is not None else None for x in preds_fut_long_0])})
+    st.table(results_fmt.style.applymap(color_red,subset=['Pred_0','Pred_1','Pred_2','Pred_3']))
+
+    diffs = pd.DataFrame({'Día':results['Día'],
+                        'Observado': d_long_0,
+                        'Pred_3_error':(results['Observado']-results['Pred_3'])/results['Pred_3'],
+                        'Pred_2_error':(results['Observado']-results['Pred_2'])/results['Pred_2'],
+                        'Pred_1_error':(results['Observado']-results['Pred_1'])/results['Pred_1']})
+    
+    st.table(diffs[(-post_days-3):-post_days].reset_index().drop('index',axis=1).style.applymap(color_red,subset=['Pred_1_error','Pred_2_error','Pred_3_error']).format({'Observado':"{:.0f}",
+                        'Pred_3_error':"{:.2%}",
+                        'Pred_2_error':"{:.2%}",
+                        'Pred_1_error':"{:.2%}"}, na_rep=""))
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
