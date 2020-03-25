@@ -50,6 +50,7 @@ def plot_ccaa_curve(ca):
 def remove_na(l):
     return [str(x) if x is not None else "" for x in l]
 
+
 # The SIR model differential equations.
 def deriv(y, t, N, beta, gamma):
     S, I, R = y
