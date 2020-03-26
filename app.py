@@ -253,7 +253,7 @@ if section_ind=='Series temporales: Estudio a corto plazo':
                             'Pred_1_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_1_smooth']]),
                             'Pred_0_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_0_smooth']])})
 
-    st.table(results_fmt_smt[(-post_days-3):].style.applymap(color_red,subset=['Pred_0_smooth','Pred_1_smooth','Pred_2_smooth','Pred_3']))
+    st.table(results_fmt_smt.style.applymap(color_red,subset=['Pred_0_smooth','Pred_1_smooth','Pred_2_smooth','Pred_3']))
 
     diffs_smt = pd.DataFrame({'Día':results_smt['Día'],
                         'Observado': d_long_0,
