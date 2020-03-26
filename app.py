@@ -5,6 +5,7 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
+from matplotlib import cm
 import statsmodels.api as sm
 from scipy.integrate import odeint
 from patsy import dmatrices
