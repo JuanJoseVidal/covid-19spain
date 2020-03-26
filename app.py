@@ -62,6 +62,16 @@ def plot_ccaa_curve(ca):
     st.pyplot()
     st.table(pd.DataFrame({'Day':days_fut_fmt,'Observed':remove_na(response_fut),'Predictions':[int(p) for p in predict_fut]}).style.applymap(color_red,subset=['Predictions']))
 
+def extract_diffs(var, dia_study):
+    dia_study_ant = dia_study - datetime.timedelta(days=1)
+    return data_pob_agg.query(f'dia=="{dia_study}"').reset_index()[var][0] - \
+            data_pob_agg.query(f'dia=="{dia_study_ant}"').reset_index()[var][0]
+
+def extract_diffs_ccaa(var, dia_study, ccaa):
+    dia_study_ant = dia_study - datetime.timedelta(days=1)
+    return data_pob.query(f'dia=="{dia_study}"&CCAA_Name=="{ccaa}"').reset_index()[var][0] - \
+            data_pob.query(f'dia=="{dia_study_ant}"&CCAA_Name=="{ccaa}"').reset_index()[var][0]
+
 def color_red(val):
     """
     Takes a scalar and returns a string with
@@ -118,7 +128,7 @@ def predict_geoserie(d,remove,post_days,geom_days,day_ini):
     return d_long, preds_fut_long, days_long
     
 st.sidebar.title('Índice')
-section_ind = st.sidebar.radio('',['Introducción','Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
+section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
 if section_ind=='Introducción':
     st.title('Proyección sobre la evolución de la incidencia del virus COVID-19')
@@ -168,6 +178,45 @@ if section_ind=='Introducción':
     Datadista (Github) y los proporcionados por el Johns Hopkins CSSE.
     ''')
 
+if section_ind=='Informe diario':
+    st.title('Informe de evolución diaria.')
+    data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
+    data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'pob']].groupby('dia').agg('sum').reset_index()
+    data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
+    ult_day = data_pob_agg['dia'].max()
+    st.markdown('## Acumulado a día {}.'.format(ult_day.strftime('%Y-%m-%d')))
+    st.write('Casos confirmados: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['total_casos'][0]))
+    st.write('Fallecimientos: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['deaths'][0]))
+    st.write('Casos hospitalizados: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['hospit'][0]))
+    st.write('Ingresados en UCI: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['ingr_UCI'][0]))
+
+    st.markdown('## Evolución diaria.')
+    dia_select = [d for d in data_pob_agg['dia'][1:]]
+    day_format_func = lambda x: x.strftime('%Y-%m-%d') 
+    dia_study = st.selectbox('Día',dia_select,key='day_informe',index=len(dia_select)-1,format_func=day_format_func)
+
+    st.write('Nuevos casos confirmados: ',extract_diffs('total_casos', dia_study))
+    st.write('Nuevos fallecimientos: ',extract_diffs('deaths', dia_study))
+    st.write('Nuevos casos hospitalizados: ',extract_diffs('hospit', dia_study))
+    st.write('Nuevos ingresados en UCI: ',extract_diffs('ingr_UCI', dia_study))
+
+    ca_name_inf = st.selectbox('CCAA',list(ccaa_dict.keys()),key='ca_informe')
+    inf_data_ccaa = [extract_diffs_ccaa('total_casos', dia_study, ca_name_inf),\
+    extract_diffs_ccaa('deaths', dia_study, ca_name_inf),\
+    extract_diffs_ccaa('hospit', dia_study, ca_name_inf),\
+    extract_diffs_ccaa('ingr_UCI', dia_study, ca_name_inf)]
+    st.write('Nuevos casos confirmados: ',inf_data_ccaa[0])
+    st.write('Nuevos fallecimientos: ',inf_data_ccaa[1])
+    st.write('Nuevos casos hospitalizados: ',inf_data_ccaa[2])
+    st.write('Nuevos ingresados en UCI: ',inf_data_ccaa[3])
+
+    st.write('Nota: Los hospitalizados empezaron a informarse a partir del 21 de marzo de 2020.')
+
+
+
+
+
+
 if section_ind=='Series temporales: Estudio a corto plazo':
     st.title('Series temporales: Estudio a corto plazo')
     st.markdown('''
@@ -178,7 +227,7 @@ if section_ind=='Series temporales: Estudio a corto plazo':
     validación, no de calibración, y algunos de los errores estimados.
     ''')
     data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-    data_pob_agg = data_pob[['dia', 'total_casos','deaths', 'pob']].groupby('dia').agg('sum').reset_index()
+    data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'pob']].groupby('dia').agg('sum').reset_index()
     d = list(data_pob_agg['deaths'])
     post_days = 5
     geom_days = 5
@@ -298,7 +347,7 @@ if section_ind=='SIR: Estudio a largo plazo':
 
     if all_ccaa:
         data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-        data_pob_agg = data_pob[['dia', 'total_casos','deaths', 'pob']].groupby('dia').agg('sum').reset_index()
+        data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'pob']].groupby('dia').agg('sum').reset_index()
         data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
         observed = list(data_pob_agg['pct_death_pob']) + list(np.repeat(None,max_days-len(data_pob_agg['pct_death_pob'])))
         n_obs = len(list(data_pob_agg['pct_death_pob']))
@@ -383,6 +432,9 @@ if section_ind=='SIR: Estudio a largo plazo':
 
     val_inf, idx_inf = max((val, idx) for (idx, val) in enumerate(I))
     st.write('Se espera que en {}, el {} se alcance el pico máximo de infectados con un {:.2%} de la población afectada.'.format(ca_name_long,days_str[idx_inf],val_inf/N))
+    st.write('''Nota: Este modelo SIR se podría considerar un escenario pesimista, ya que no supone que se va a realizar ningun 
+    cambio para combatir la evolución de la epidemia.
+    ''')
 
 if section_ind=='Documentación':
     st.title('Documentación')
