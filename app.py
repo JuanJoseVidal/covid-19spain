@@ -80,8 +80,8 @@ def autolabel(rects):
 
 def extract_diffs_ccaa(var, dia_study, ccaa):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
-    return int(data_pob.query(f'dia=="{dia_study}"&CCAA_Name=="{ccaa}"').reset_index()[var][0] - \
-            data_pob.query(f'dia=="{dia_study_ant}"&CCAA_Name=="{ccaa}"').reset_index()[var][0])
+    return data_pob.query(f'dia=="{dia_study}"&CCAA_Name=="{ccaa}"').reset_index()[var][0] - \
+            data_pob.query(f'dia=="{dia_study_ant}"&CCAA_Name=="{ccaa}"').reset_index()[var][0]
 
 def plot_letality_gender(gend):
     data_gnd = data_sexage.query(f'gender=="{gend}"')
@@ -239,14 +239,14 @@ if section_ind=='Informe diario':
     st.write('Nuevos casos confirmados: ',inf_data_ccaa[0])
     st.write('Nuevos fallecimientos: ',inf_data_ccaa[1])
     st.write('Nuevos casos hospitalizados: ',inf_data_ccaa[2])
-    st.write('Nuevos ingresados en UCI: ',inf_data_ccaa[3])
+    st.write('Nuevos ingresados en UCI: ',int(inf_data_ccaa[3]))
 
-    st.write('Nota: Los hospitalizados empezaron a informarse a partir del 21 de marzo de 2020.')
+    st.write('Nota: Los hospitalizados empezaron a informarse a partir del 20 de marzo de 2020.')
 
 if section_ind=='Evolución por género':
     st.title('Evolución por género')
     
-    data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
+    data_sexage = pd.read_excel(p+'src/data/Covid-19_data_sexage.xlsx')
     data_sexage = data_sexage.query('gender!="Tot"')
     
     data_fem_last = data_sexage.query('dia=="{}"&gender=="Fem"'.format(data_sexage["dia"].max()))
@@ -276,9 +276,6 @@ if section_ind=='Evolución por género':
 
     st.markdown('## Evolución de la letalidad para hombres')
     plot_letality_gender('Masc')
-
-
-
 
 if section_ind=='Series temporales: Estudio a corto plazo':
     st.title('Series temporales: Estudio a corto plazo')
