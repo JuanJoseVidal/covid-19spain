@@ -64,13 +64,43 @@ def plot_ccaa_curve(ca):
 
 def extract_diffs(var, dia_study):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
-    return data_pob_agg.query(f'dia=="{dia_study}"').reset_index()[var][0] - \
-            data_pob_agg.query(f'dia=="{dia_study_ant}"').reset_index()[var][0]
+    return int(data_pob_agg.query(f'dia=="{dia_study}"').reset_index()[var][0] - \
+            data_pob_agg.query(f'dia=="{dia_study_ant}"').reset_index()[var][0])
+
+def autolabel(rects):
+    """Attach a text label above each bar in *rects*, displaying its height."""
+    for rect in rects:
+        height = rect.get_height()
+        ax.annotate('{}'.format(int(height)),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
 
 def extract_diffs_ccaa(var, dia_study, ccaa):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
-    return data_pob.query(f'dia=="{dia_study}"&CCAA_Name=="{ccaa}"').reset_index()[var][0] - \
-            data_pob.query(f'dia=="{dia_study_ant}"&CCAA_Name=="{ccaa}"').reset_index()[var][0]
+    return int(data_pob.query(f'dia=="{dia_study}"&CCAA_Name=="{ccaa}"').reset_index()[var][0] - \
+            data_pob.query(f'dia=="{dia_study_ant}"&CCAA_Name=="{ccaa}"').reset_index()[var][0])
+
+def plot_letality_gender(gend):
+    data_gnd = data_sexage.query(f'gender=="{gend}"')
+    edades = data_gnd['edad'].unique()
+    days_plot = data_gnd['dia'].unique()
+    cmap = cm.get_cmap('Spectral',len(edades))
+    newcolors = cmap(np.linspace(0, 1, len(edades)))
+
+    fig = plt.figure(facecolor='w',figsize=(12,9))
+    ax = fig.add_subplot(111, axisbelow=True)
+    for d in range(len(days_plot)):
+        death_loop = data_gnd.query(f'dia=="{days_plot[d]}"')['letalidad']
+        ax.plot(edades, death_loop/100, 'black', alpha=0.5, lw=3, color=newcolors[d], label = f'Dia: "{pd.to_datetime(str(days_plot[d])).strftime("%Y-%m-%d")}"')
+    ax.set_xlabel('Edad')
+    ax.set_ylabel('Letalidad (%)')
+    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
+    legend = ax.legend()
+    legend.get_frame().set_alpha(0.5)
+    plt.title('Letalidad acumulada por día para {} según edad.'.format("hombres" if gend =='Masc' else "mujeres"))
+    st.pyplot()
 
 def color_red(val):
     """
@@ -128,7 +158,7 @@ def predict_geoserie(d,remove,post_days,geom_days,day_ini):
     return d_long, preds_fut_long, days_long
     
 st.sidebar.title('Índice')
-section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
+section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Evolución por género', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
 if section_ind=='Introducción':
     st.title('Proyección sobre la evolución de la incidencia del virus COVID-19')
@@ -200,7 +230,7 @@ if section_ind=='Informe diario':
     st.write('Nuevos casos hospitalizados: ',extract_diffs('hospit', dia_study))
     st.write('Nuevos ingresados en UCI: ',extract_diffs('ingr_UCI', dia_study))
 
-    ca_name_inf = st.selectbox('CCAA',list(ccaa_dict.keys()),key='ca_informe')
+    ca_name_inf = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='ca_informe')
     inf_data_ccaa = [extract_diffs_ccaa('total_casos', dia_study, ca_name_inf),\
     extract_diffs_ccaa('deaths', dia_study, ca_name_inf),\
     extract_diffs_ccaa('hospit', dia_study, ca_name_inf),\
@@ -212,7 +242,39 @@ if section_ind=='Informe diario':
 
     st.write('Nota: Los hospitalizados empezaron a informarse a partir del 21 de marzo de 2020.')
 
+if section_ind=='Evolución por género':
+    st.title('Evolución por género')
+    
+    data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
+    data_sexage = data_sexage.query('gender!="Tot"')
+    
+    data_fem_last = data_sexage.query('dia=="{}"&gender=="Fem"'.format(data_sexage["dia"].max()))
+    data_masc_last = data_sexage.query('dia=="{}"&gender=="Masc"'.format(data_sexage["dia"].max()))
 
+    x = np.arange(len(data_fem_last['edad']))  # the label locations
+    width = 0.35  # the width of the bars
+
+    fig, ax = plt.subplots(figsize=(12,9))
+    rects1 = ax.bar(x - width/2, data_fem_last['total_casos'], width, color='purple', label='Mujeres')
+    rects2 = ax.bar(x + width/2, data_masc_last['total_casos'], width, color='green', label='Hombres')
+
+    # Add some text for labels, title and custom x-axis tick labels, etc.
+    ax.set_xlabel('Grupos de edad')
+    ax.set_ylabel('Casos infectados')
+    ax.set_title('Casos infectados por género y grupo de edad')
+    ax.set_xticks(x)
+    ax.set_xticklabels(data_fem_last['edad'])
+    ax.legend()
+    autolabel(rects1)
+    autolabel(rects2)
+    fig.tight_layout()
+    st.pyplot()
+
+    st.markdown('## Evolución de la letalidad para mujeres')
+    plot_letality_gender('Fem')
+
+    st.markdown('## Evolución de la letalidad para hombres')
+    plot_letality_gender('Masc')
 
 
 
@@ -330,7 +392,7 @@ if section_ind=='GLM: Estudio a corto plazo':
 
     mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
     res = mod.fit()
-    ca_name_short = st.selectbox('CCAA',list(ccaa_dict.keys()),key='short')
+    ca_name_short = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='short')
     plot_ccaa_curve(ca_name_short)
     
 
@@ -359,7 +421,7 @@ if section_ind=='SIR: Estudio a largo plazo':
 
     else:
         data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-        ca_name_long = st.selectbox('CCAA',list(ccaa_dict.keys()),key='long')
+        ca_name_long = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='long')
         ca_number = ccaa_dict[ca_name_long]
         ca_name = rel.loc[rel['CCAA']==ca_number].reset_index()['CCAA_Name'][0]
         data_model = data_pob.loc[data_pob['CCAA']==ca_number].reset_index()[['CCAA', 'total_casos', 'pct_death_pob', 'pob', 'dia']]
