@@ -14,8 +14,10 @@ from patsy import dmatrices
 @st.cache
 def load_data():
     data = pd.read_excel('data/Covid-19_data.xlsx')
+    data = data.loc[data['to_study']=='Yes']
     data['day'] = [x.day for x in data['dia']]
     rel = pd.read_excel('data/Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
+    rel = rel.loc[rel['CCAA'] < 18]
     ccaa_dict = {c:i for c,i in zip(rel['CCAA_Name'],rel['CCAA'])}
     n_prov = len(ccaa_dict)
 
@@ -33,9 +35,9 @@ def load_data_sexage():
     return data_sexage
 
 def predict_model(res,ca,day):
-    pred = [1] + list(np.repeat(0,18)) + [np.log(day)] + [day]
+    pred = [1] + list(np.repeat(0,16)) + [1] + [np.log(day)] + [day]
     pred[ccaa_dict[ca]-1] = 1
-    pred = pred + [p*day for p in pred[1:19]]
+    pred = pred + [p*day for p in pred[1:17]]
     return res.predict(pred)
 
 def extract_diffs(var, dia_study):
@@ -90,7 +92,7 @@ def remove_na(l,pct=False):
     if pct == True:
         return ['{:.2%}'.format(x) if x is not None else "" for x in l]
     else:
-        return [str(x) if x is not None else "" for x in l]
+        return [str(int(x)) if str(x) != 'nan' and x != None  else "" for x in l]
 
 def extract_only_fut_preds(i):
     return list(np.repeat(None,len(predict_fut[i])-3-i)) + [int(p) for p in predict_fut[i][(-3-i):]]
@@ -102,6 +104,53 @@ def deriv(y, t, N, beta, gamma):
     dIdt = beta * S * I / N - gamma * I
     dRdt = gamma * I
     return dSdt, dIdt, dRdt
+
+@st.cache
+def train_glm(response):
+    predict_df = {}
+    response_df = {}
+
+    for ca in ccaa_dict.keys():
+        res = []
+        predict_fut_ccaa = []
+
+        for i in range(5):
+            n_days_test = i
+            if i==0:
+                data_red = data.copy()
+            else:
+                data_test = data.loc[data['dia']>=np.sort(data['dia'].unique())[-n_days_test]]
+                data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
+
+            # Model
+            data_model = data_red[['day','CCAA',response, 'confin']].copy()
+            y, X = dmatrices(f'{response} ~ np.log(day) + C(CCAA)*day + confin', data=data_model, return_type='dataframe')
+
+            mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
+            res.append(mod.fit())
+            data_plot = data_red.query(f'CCAA_Name=="{ca}"')[['day',response]]
+            if i==0:
+                response_df.update({ca:list(data_plot[response]) + list(np.repeat(None,3+i))})
+            days_fut = list(data_plot['day']) + list(range(data_plot['day'].max()+1,data_plot['day'].max()+4+i))
+
+            predict_fut_ccaa.append([predict_model(res[i],ca,d) for d in days_fut])
+        predict_df.update({ca:predict_fut_ccaa})
+
+    max_days = len(days_fut)
+    min_day = datetime.date(2020,3,min(days_fut))
+    days = [min_day]
+    for i in range(max_days-1): 
+        days.append(days[i] + datetime.timedelta(days=1))
+    days_fut_fmt = [d.strftime('%Y-%m-%d') for d in days]
+
+
+    predict_df_0 = pd.DataFrame({ca:predict_df[ca][0] for ca in list(ccaa_dict.keys())})
+    predict_df_1 = pd.DataFrame({ca:predict_df[ca][1] for ca in list(ccaa_dict.keys())})
+    predict_df_2 = pd.DataFrame({ca:predict_df[ca][2] for ca in list(ccaa_dict.keys())})
+    predict_df_3 = pd.DataFrame({ca:predict_df[ca][3] for ca in list(ccaa_dict.keys())})
+    predict_df_4 = pd.DataFrame({ca:predict_df[ca][4] for ca in list(ccaa_dict.keys())})
+    predict_df_full = [predict_df_0, predict_df_1, predict_df_2, predict_df_3, predict_df_4]
+    return predict_df_full, response_df, days_fut_fmt
 
 def predict_geoserie(d,remove,post_days,geom_days,day_ini):
     if remove>0:
@@ -362,42 +411,21 @@ if section_ind=='GLM: Estudio a corto plazo':
     no lo hará para un largo plazo, ya que en ningún momento se tiene en cuenta una futura bajada del contagio.
     ''')
     data, rel, ccaa_dict, n_prov, _, _ = load_data()
-    res = []
-    predict_fut = []
-    response_fut = []
-
-    ca = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='ca_name_glm')
     responses_display = {'deaths':'Fallecimientos', 'total_casos':'Casos observados'}
     response = st.selectbox('Respuesta',['deaths', 'total_casos'],format_func=lambda x: responses_display[x])
+    predict_df_full, response_df, days_fut_fmt = train_glm(response)
 
-    for i in range(5):
-        
-        n_days_test = i
-        if i==0:
-            data_red = data.copy()
-        else:
-            data_test = data.loc[data['dia']>=np.sort(data['dia'].unique())[-n_days_test]]
-            data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
+    spain_select = st.checkbox('Predicción estatal',['España','CCAA'],key='spain_select_glm')
 
-        # Model
-        data_model = data_red[['day','CCAA',response]].copy()
-        y, X = dmatrices(f'{response} ~ np.log(day) + C(CCAA)*day', data=data_model, return_type='dataframe')
-
-        mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
-        res.append(mod.fit())
-
-        data_plot = data_red.query(f'CCAA_Name=="{ca}"')[['day',response]]
-        response_fut.append(list(data_plot[response]) + list(np.repeat(None,3+i)))
-        days_fut = list(data_plot['day']) + list(range(data_plot['day'].max()+1,data_plot['day'].max()+4+i))
-        
-        predict_fut.append([predict_model(res[i],ca,d) for d in days_fut])
-        
-    max_days = len(days_fut)
-    min_day = datetime.date(2020,3,min(days_fut))
-    days = [min_day]
-    for i in range(max_days-1): 
-        days.append(days[i] + datetime.timedelta(days=1))
-    days_fut_fmt = [d.strftime('%Y-%m-%d') for d in days]
+    if spain_select:
+        ca_select = 'Spain'
+        predict_fut = [predict_df_full[i].sum(1) for i in range(len(predict_df_full))]
+        response_fut = pd.DataFrame(response_df).sum(1)
+        response_fut[-3:] = None
+    else:
+        ca_select = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='ca_name_glm')
+        predict_fut = [pred_ca[ca_select] for pred_ca in predict_df_full]
+        response_fut = response_df[ca_select]
 
     cmap = cm.get_cmap('winter',len(predict_fut))
     newcolors = cmap(np.linspace(0, 1, len(predict_fut)))
@@ -407,10 +435,12 @@ if section_ind=='GLM: Estudio a corto plazo':
 
     for i in range(len(predict_fut)):
         ax.plot(days_fut_fmt, predict_fut[i], 'b', alpha=0.5, lw=2, label='Predicted, until {}'.format(days_fut_fmt[-4-i]),color=newcolors[i])
-    ax.plot(days_fut_fmt, response_fut[0], 'r', alpha=0.5, lw=3, label='Observed')
+    ax.plot(days_fut_fmt, response_fut, 'r', alpha=0.5, lw=3, label='Observed')
 
     ax.set_xlabel('Día')
     ax.set_ylabel(response)
+    if spain_select:
+        plt.ylim((0,response_fut.max()*2))
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=0.1,rotation=45)
     plt.xticks(ha='right')
@@ -419,11 +449,11 @@ if section_ind=='GLM: Estudio a corto plazo':
     legend.get_frame().set_alpha(1)
     for spine in ('top', 'right', 'bottom', 'left'):
         ax.spines[spine].set_visible(False)
-    plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
+    plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca_select,response))
     st.pyplot()
 
     st.table(pd.DataFrame({'Day':days_fut_fmt,
-                'Observed':remove_na(response_fut[0]),
+                'Observed':remove_na(response_fut),
                 'Pred_unt_{}'.format(days_fut_fmt[-4-4]):remove_na(extract_only_fut_preds(4)),
                 'Pred_unt_{}'.format(days_fut_fmt[-4-3]):remove_na(extract_only_fut_preds(3)),
                 'Pred_unt_{}'.format(days_fut_fmt[-4-2]):remove_na(extract_only_fut_preds(2)),
@@ -434,10 +464,10 @@ if section_ind=='GLM: Estudio a corto plazo':
     error = []
 
     for i in range(1,5):
-        error.append(list(np.repeat(None,4-i)) + [(p-r)/r for r,p in zip(response_fut[0][(-3-i):-3],extract_only_fut_preds(i)[(-3-i):-3])])
+        error.append(list(np.repeat(None,4-i)) + [(p-r)/r for r,p in zip(response_fut[(-3-i):-3],extract_only_fut_preds(i)[(-3-i):-3])])
 
     diffs = pd.DataFrame({'Día':days_fut_fmt[-7:-3],
-                        'Observado': remove_na(response_fut[0][-7:-3]),
+                        'Observado': remove_na(response_fut[-7:-3]),
                         'Error_until_{}'.format(days_fut_fmt[-4-4]):remove_na(error[3],pct=True),
                         'Error_until_{}'.format(days_fut_fmt[-4-3]):remove_na(error[2],pct=True),
                         'Error_until_{}'.format(days_fut_fmt[-4-2]):remove_na(error[1],pct=True),
