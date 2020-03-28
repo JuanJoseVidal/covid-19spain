@@ -28,7 +28,7 @@ def load_data():
 
 @st.cache
 def load_data_sexage():
-    data_sexage = pd.read_excel(p+'data/Covid-19_data_sexage.xlsx')
+    data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
     data_sexage = data_sexage.query('gender!="Tot"')
     return data_sexage
 
