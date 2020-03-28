@@ -221,7 +221,7 @@ if section_ind=='Informe diario':
 if section_ind=='Evolución por género':
     st.title('Evolución por género')
     
-    data_sexage = pd.read_excel(p+'src/data/Covid-19_data_sexage.xlsx')
+    data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
     data_sexage = data_sexage.query('gender!="Tot"')
     
     data_fem_last = data_sexage.query('dia=="{}"&gender=="Fem"'.format(data_sexage["dia"].max()))
