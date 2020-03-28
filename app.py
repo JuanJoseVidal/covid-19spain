@@ -26,42 +26,11 @@ def load_data():
     data_pob['pct_death_pob'] = data_pob['deaths']/data_pob['pob']
     return data, rel, ccaa_dict, n_prov, pob, data_pob
 
-def predict_model(ca,day):
-    pred = [1] + list(np.repeat(0,18)) + [day]
+def predict_model(res,ca,day):
+    pred = [1] + list(np.repeat(0,18)) + [np.log(day)] + [day]
     pred[ccaa_dict[ca]-1] = 1
-    return float(res.predict(pred))
-
-def plot_ccaa_curve(ca):
-    data_plot = data.query(f'CCAA_Name=="{ca}"')[['day',response]]
-    response_fut = list(data_plot[response]) + list(np.repeat(None,5))
-    days_fut = list(data_plot['day']) + list(range(data_plot['day'].max()+1,data_plot['day'].max()+6))
-    predict_fut = [predict_model(ca,d) for d in days_fut]
-
-    max_days = len(days_fut)
-    min_day = datetime.date(2020,3,min(days_fut))
-    days = [min_day]
-    for i in range(max_days-1): 
-        days.append(days[i] + datetime.timedelta(days=1))
-    days_fut_fmt = [d.strftime('%Y-%m-%d') for d in days]
-
-    fig = plt.figure(facecolor='w',figsize=(12,9))
-    ax = fig.add_subplot(111, axisbelow=True)
-    ax.plot(days_fut_fmt, predict_fut, 'b', alpha=0.5, lw=2, label='Predicted')
-    ax.plot(days_fut_fmt, response_fut, 'r', alpha=0.5, lw=2, label='Observed')
-
-    ax.set_xlabel('Día')
-    ax.set_ylabel(response)
-    ax.yaxis.set_tick_params(length=0)
-    ax.xaxis.set_tick_params(length=0.1,rotation=45)
-    plt.xticks(ha='right')
-    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
-    legend = ax.legend()
-    legend.get_frame().set_alpha(1)
-    for spine in ('top', 'right', 'bottom', 'left'):
-        ax.spines[spine].set_visible(False)
-    plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
-    st.pyplot()
-    st.table(pd.DataFrame({'Day':days_fut_fmt,'Observed':remove_na(response_fut),'Predictions':[int(p) for p in predict_fut]}).style.applymap(color_red,subset=['Predictions']))
+    pred = pred + [p*day for p in pred[1:19]]
+    return res.predict(pred)
 
 def extract_diffs(var, dia_study):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
@@ -111,8 +80,14 @@ def color_red(val):
     """
     return 'color: red' 
 
-def remove_na(l):
-    return [str(x) if x is not None else "" for x in l]
+def remove_na(l,pct=False):
+    if pct == True:
+        return ['{:.2%}'.format(x) if x is not None else "" for x in l]
+    else:
+        return [str(x) if x is not None else "" for x in l]
+
+def extract_only_fut_preds(i):
+    return list(np.repeat(None,len(predict_fut[i])-3-i)) + [int(p) for p in predict_fut[i][(-3-i):]]
 
 # The SIR model differential equations.
 def deriv(y, t, N, beta, gamma):
@@ -246,7 +221,7 @@ if section_ind=='Informe diario':
 if section_ind=='Evolución por género':
     st.title('Evolución por género')
     
-    data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
+    data_sexage = pd.read_excel(p+'src/data/Covid-19_data_sexage.xlsx')
     data_sexage = data_sexage.query('gender!="Tot"')
     
     data_fem_last = data_sexage.query('dia=="{}"&gender=="Fem"'.format(data_sexage["dia"].max()))
@@ -259,6 +234,7 @@ if section_ind=='Evolución por género':
     rects1 = ax.bar(x - width/2, data_fem_last['total_casos'], width, color='purple', label='Mujeres')
     rects2 = ax.bar(x + width/2, data_masc_last['total_casos'], width, color='green', label='Hombres')
 
+    st.markdown('## Infectados acumulados a día {}'.format(data_sexage["dia"].max().strftime('%Y-%m-%d')))
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_xlabel('Grupos de edad')
     ax.set_ylabel('Casos infectados')
@@ -381,17 +357,90 @@ if section_ind=='GLM: Estudio a corto plazo':
     comunidad autónoma como únicos factores de riesgo. Hay que tener en cuenta que este modelo predecirá bien los próximos días pero
     no lo hará para un largo plazo, ya que en ningún momento se tiene en cuenta una futura bajada del contagio.
     ''')
-    data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-    # Model
+    data, rel, ccaa_dict, n_prov, _, _ = load_data()
+    res = []
+    predict_fut = []
+    response_fut = []
+
+    ca = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='ca_name_glm')
     responses_display = {'deaths':'Fallecimientos', 'total_casos':'Casos observados'}
     response = st.selectbox('Respuesta',['deaths', 'total_casos'],format_func=lambda x: responses_display[x])
-    data_model = data_pob[['day','CCAA',response]].copy()
-    y, X = dmatrices(f'{response} ~ C(CCAA) + day', data=data_model, return_type='dataframe')
 
-    mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
-    res = mod.fit()
-    ca_name_short = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='short')
-    plot_ccaa_curve(ca_name_short)
+    for i in range(5):
+        
+        n_days_test = i
+        if i==0:
+            data_red = data.copy()
+        else:
+            data_test = data.loc[data['dia']>=np.sort(data['dia'].unique())[-n_days_test]]
+            data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
+
+        # Model
+        data_model = data_red[['day','CCAA',response]].copy()
+        y, X = dmatrices(f'{response} ~ np.log(day) + C(CCAA)*day', data=data_model, return_type='dataframe')
+
+        mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
+        res.append(mod.fit())
+
+        data_plot = data_red.query(f'CCAA_Name=="{ca}"')[['day',response]]
+        response_fut.append(list(data_plot[response]) + list(np.repeat(None,3+i)))
+        days_fut = list(data_plot['day']) + list(range(data_plot['day'].max()+1,data_plot['day'].max()+4+i))
+        
+        predict_fut.append([predict_model(res[i],ca,d) for d in days_fut])
+        
+    max_days = len(days_fut)
+    min_day = datetime.date(2020,3,min(days_fut))
+    days = [min_day]
+    for i in range(max_days-1): 
+        days.append(days[i] + datetime.timedelta(days=1))
+    days_fut_fmt = [d.strftime('%Y-%m-%d') for d in days]
+
+    cmap = cm.get_cmap('winter',len(predict_fut))
+    newcolors = cmap(np.linspace(0, 1, len(predict_fut)))
+
+    fig = plt.figure(facecolor='w',figsize=(12,9))
+    ax = fig.add_subplot(111, axisbelow=True)
+
+    for i in range(len(predict_fut)):
+        ax.plot(days_fut_fmt, predict_fut[i], 'b', alpha=0.5, lw=2, label='Predicted, until {}'.format(days_fut_fmt[-4-i]),color=newcolors[i])
+    ax.plot(days_fut_fmt, response_fut[0], 'r', alpha=0.5, lw=3, label='Observed')
+
+    ax.set_xlabel('Día')
+    ax.set_ylabel(response)
+    ax.yaxis.set_tick_params(length=0)
+    ax.xaxis.set_tick_params(length=0.1,rotation=45)
+    plt.xticks(ha='right')
+    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
+    legend = ax.legend()
+    legend.get_frame().set_alpha(1)
+    for spine in ('top', 'right', 'bottom', 'left'):
+        ax.spines[spine].set_visible(False)
+    plt.title('{}: Prediction of the evolution of the {}, COVID-19'.format(ca,response))
+    st.pyplot()
+
+    st.table(pd.DataFrame({'Day':days_fut_fmt,
+                'Observed':remove_na(response_fut[0]),
+                'Pred_unt_{}'.format(days_fut_fmt[-4-4]):remove_na(extract_only_fut_preds(4)),
+                'Pred_unt_{}'.format(days_fut_fmt[-4-3]):remove_na(extract_only_fut_preds(3)),
+                'Pred_unt_{}'.format(days_fut_fmt[-4-2]):remove_na(extract_only_fut_preds(2)),
+                'Pred_unt_{}'.format(days_fut_fmt[-4-1]):remove_na(extract_only_fut_preds(1)),
+                'Pred_unt_{}'.format(days_fut_fmt[-4-0]):remove_na(extract_only_fut_preds(0))})\
+    .style.applymap(color_red, subset=['Pred_unt_{}'.format(days_fut_fmt[-1-i]) for i in range(3,8)]))
+
+    error = []
+
+    for i in range(1,5):
+        error.append(list(np.repeat(None,4-i)) + [(p-r)/r for r,p in zip(response_fut[0][(-3-i):-3],extract_only_fut_preds(i)[(-3-i):-3])])
+
+    diffs = pd.DataFrame({'Día':days_fut_fmt[-7:-3],
+                        'Observado': remove_na(response_fut[0][-7:-3]),
+                        'Error_until_{}'.format(days_fut_fmt[-4-4]):remove_na(error[3],pct=True),
+                        'Error_until_{}'.format(days_fut_fmt[-4-3]):remove_na(error[2],pct=True),
+                        'Error_until_{}'.format(days_fut_fmt[-4-2]):remove_na(error[1],pct=True),
+                        'Error_until_{}'.format(days_fut_fmt[-4-1]):remove_na(error[0],pct=True)})\
+    .style.applymap(color_red, subset=['Error_until_{}'.format(days_fut_fmt[-4-i]) for i in range(1,5)])
+
+    st.table(diffs)
     
 
 if section_ind=='SIR: Estudio a largo plazo':
