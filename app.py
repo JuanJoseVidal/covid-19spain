@@ -26,6 +26,12 @@ def load_data():
     data_pob['pct_death_pob'] = data_pob['deaths']/data_pob['pob']
     return data, rel, ccaa_dict, n_prov, pob, data_pob
 
+@st.cache
+def load_data_sexage():
+    data_sexage = pd.read_excel(p+'data/Covid-19_data_sexage.xlsx')
+    data_sexage = data_sexage.query('gender!="Tot"')
+    return data_sexage
+
 def predict_model(res,ca,day):
     pred = [1] + list(np.repeat(0,18)) + [np.log(day)] + [day]
     pred[ccaa_dict[ca]-1] = 1
@@ -220,10 +226,8 @@ if section_ind=='Informe diario':
 
 if section_ind=='Evolución por género':
     st.title('Evolución por género')
-    
-    data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
-    data_sexage = data_sexage.query('gender!="Tot"')
-    
+    data_sexage = load_data_sexage()
+
     data_fem_last = data_sexage.query('dia=="{}"&gender=="Fem"'.format(data_sexage["dia"].max()))
     data_masc_last = data_sexage.query('dia=="{}"&gender=="Masc"'.format(data_sexage["dia"].max()))
 
