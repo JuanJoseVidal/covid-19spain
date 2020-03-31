@@ -15,7 +15,7 @@ from patsy import dmatrices
 def load_data():
     data = pd.read_excel('data/Covid-19_data.xlsx')
     data = data.loc[data['to_study']=='Yes']
-    data['day'] = [x.day for x in data['dia']]
+    data['day'] = [transform_day_glm(x) for x in data['dia']]
     rel = pd.read_excel('data/Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
     rel = rel.loc[rel['CCAA'] < 18]
     ccaa_dict = {c:i for c,i in zip(rel['CCAA_Name'],rel['CCAA'])}
@@ -34,6 +34,12 @@ def load_data_sexage():
     data_sexage = data_sexage.query('gender!="Tot"')
     return data_sexage
 
+def transform_day_glm(d):
+    if d.month <= 3:
+        return d.day
+    else:
+        return d.day + 31
+        
 def extract_diffs(var, dia_study):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
     return int(data_pob_agg.query(f'dia=="{dia_study}"').reset_index()[var][0] - \
