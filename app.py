@@ -34,12 +34,6 @@ def load_data_sexage():
     data_sexage = data_sexage.query('gender!="Tot"')
     return data_sexage
 
-def predict_model(res,ca,day):
-    pred = [1] + list(np.repeat(0,16)) + [1] + [np.log(day)] + [day]
-    pred[ccaa_dict[ca]-1] = 1
-    pred = pred + [p*day for p in pred[1:17]]
-    return res.predict(pred)
-
 def extract_diffs(var, dia_study):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
     return int(data_pob_agg.query(f'dia=="{dia_study}"').reset_index()[var][0] - \
@@ -105,6 +99,12 @@ def deriv(y, t, N, beta, gamma):
     dRdt = gamma * I
     return dSdt, dIdt, dRdt
 
+def predict_model(res,ca,day):
+    pred = [1] + list(np.repeat(0,16)) + [1] + [day**2] + [day]
+    pred[ccaa_dict[ca]-1] = 1
+    pred = pred + [p*day for p in pred[1:17]]
+    return res.predict(pred)
+    
 @st.cache
 def train_glm(response):
     predict_df = {}
@@ -124,7 +124,7 @@ def train_glm(response):
 
             # Model
             data_model = data_red[['day','CCAA',response, 'confin']].copy()
-            y, X = dmatrices(f'{response} ~ np.log(day) + C(CCAA)*day + confin', data=data_model, return_type='dataframe')
+            y, X = dmatrices(f'{response} ~ I(day**2) + C(CCAA)*day + confin', data=data_model, return_type='dataframe')
 
             mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
             res.append(mod.fit())
