@@ -575,8 +575,8 @@ if section_ind=='SIR: Estudio a largo plazo':
 
     val_inf, idx_inf = max((val, idx) for (idx, val) in enumerate(I))
     st.write('Se espera que en {}, el {} se alcance el pico máximo de infectados con un {:.2%} de la población afectada.'.format(ca_name_long,days_str[idx_inf],val_inf/N))
-    st.write('''Nota: Este modelo SIR se podría considerar un escenario pesimista, ya que no supone que se va a realizar ningun 
-    cambio para combatir la evolución de la epidemia.
+    st.write('''Nota: Este modelo SIR representa el escenario que se esperaría sin tomar ninguna medida de contención. 
+    En la actualidad, estamos trabajando en el modelo SEIR para ampliar los resultados.
     ''')
 
 if section_ind=='Documentación':
