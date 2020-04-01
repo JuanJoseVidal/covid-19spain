@@ -195,8 +195,6 @@ def predict_geoserie(d,remove,post_days,geom_days,day_ini):
     return d_long, preds_fut_long, days_long
     
 st.sidebar.title('Índice')
-data, _, _, _, _, _ = load_data()
-st.sidebar.markdown('Última actualización: {}'.format((data['dia'].max() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')))
 section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Evolución por género', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
 if section_ind=='Introducción':
