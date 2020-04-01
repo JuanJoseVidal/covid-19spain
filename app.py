@@ -39,7 +39,7 @@ def transform_day_glm(d):
         return d.day
     else:
         return d.day + 31
-        
+
 def extract_diffs(var, dia_study):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
     return int(data_pob_agg.query(f'dia=="{dia_study}"').reset_index()[var][0] - \
@@ -577,6 +577,32 @@ if section_ind=='SIR: Estudio a largo plazo':
     for spine in ('top', 'right', 'bottom', 'left'):
         ax.spines[spine].set_visible(False)
     plt.title('{}: Prediction of the evolution of the COVID-19'.format(ca_name_long))
+    st.pyplot()
+
+    detail_lim = len(list(data_pob['dia'].unique()))
+        # Plot the data on three separate curves for S(t), I(t) and R(t)
+    fig = plt.figure(facecolor='w',figsize=(12,9))
+    ax = fig.add_subplot(111, axisbelow=True)
+    ax.plot(days_str, S/N, 'b', alpha=0.5, lw=2, label='Susceptible')
+    ax.plot(days_str, I/N, 'r', alpha=0.5, lw=2, label='Infected')
+    ax.plot(days_str, R/N, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
+    ax.plot(days_str,observed, 'black', alpha=1, lw=3, label='Observed Infected')
+    ax.set_xlabel('Time/days')
+    ax.set_ylabel('% People')
+    ax.set_ylim(0,((I/N)[:detail_lim]).max()*1.1)
+    #ax.set_ylim(0,0.001)
+    ax.set_xlim(0,detail_lim)
+    loc = plticker.MultipleLocator(base=3) # this locator puts ticks at regular intervals
+    ax.xaxis.set_major_locator(loc)
+    ax.yaxis.set_tick_params(length=0)
+    ax.xaxis.set_tick_params(length=2,rotation=45)
+    plt.xticks(ha='right')
+    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
+    legend = ax.legend()
+    legend.get_frame().set_alpha(0.5)
+    for spine in ('top', 'right', 'bottom', 'left'):
+        ax.spines[spine].set_visible(False)
+    plt.title('{}: Detail of prediction of the evolution of the COVID-19'.format(ca_name_long))
     st.pyplot()
 
     val_inf, idx_inf = max((val, idx) for (idx, val) in enumerate(I))
