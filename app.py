@@ -424,6 +424,7 @@ if section_ind=='GLM: Estudio a corto plazo':
     spain_select = st.checkbox('Predicción estatal',['España','CCAA'],key='spain_select_glm')
 
     if spain_select:
+        st.write('Nota: Ceuta y Melilla no se incluyen en el estudio.')
         ca_select = 'Spain'
         predict_fut = [predict_df_full[i].sum(1) for i in range(len(predict_df_full))]
         response_fut = pd.DataFrame(response_df).sum(1)
