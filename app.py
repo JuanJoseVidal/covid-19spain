@@ -693,3 +693,7 @@ if section_ind=='Acerca del proyecto':
     LinkedIn: [Francisco Gabriel Morillas Jurado](https://www.linkedin.com/in/fracisco-gabriel-morillas-jurado-4a5290a6/?originalSubdomain=es)  
     Mail: [francisco.morillas@uv.es](mailto:francisco.morillas@uv.es)  
     ''')
+    st.markdown('''**José Valero Cuadra**  
+    CIO en la Universitat Miguel Hernández.  
+    Mail: [jvalero@umh.es](mailto:jvalero@umh.es)  
+    ''')
