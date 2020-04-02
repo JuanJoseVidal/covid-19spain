@@ -65,7 +65,7 @@ def plot_letality_gender(gend):
     edades = data_gnd['edad'].unique()
     days_plot = data_gnd['dia'].unique()
     cmap = cm.get_cmap('Spectral',len(edades))
-    newcolors = cmap(np.linspace(0, 1, len(edades)))
+    newcolors = cmap(np.linspace(0, 1, len(days_plot)))
 
     fig = plt.figure(facecolor='w',figsize=(12,9))
     ax = fig.add_subplot(111, axisbelow=True)
