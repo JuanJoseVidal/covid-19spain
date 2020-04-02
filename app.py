@@ -248,7 +248,7 @@ if section_ind=='Introducción':
 if section_ind=='Informe diario':
     st.title('Informe de evolución diaria.')
     data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-    data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'pob']].groupby('dia').agg('sum').reset_index()
+    data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'curados', 'pob']].groupby('dia').agg('sum').reset_index()
     data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
     ult_day = data_pob_agg['dia'].max()
     st.markdown('## Acumulado a día {}.'.format(ult_day.strftime('%Y-%m-%d')))
@@ -256,8 +256,31 @@ if section_ind=='Informe diario':
     st.write('Fallecimientos: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['deaths'][0]))
     st.write('Casos hospitalizados: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['hospit'][0]))
     st.write('Ingresados en UCI: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['ingr_UCI'][0]))
+    st.write('Casos recuperados: ',int(data_pob_agg.query(f'dia=="{ult_day}"').reset_index()['curados'][0]))
+
 
     st.markdown('## Evolución diaria.')
+
+    fig, ax1 = plt.subplots(figsize=(12,9))
+    ax1.set_xlabel('Día')
+    ax1.set_ylabel('Casos infectados (barras, diarios)', fontsize=20, color='grey')
+    ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['total_casos'].diff()[1:], color='grey',label='Casos infectados')
+    ax1.tick_params(axis='y')
+    ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['curados'].diff()[1:], color='green', label='Curados')
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+    ax2.set_ylabel('Fallecimientos (línea, diarios)', fontsize=20, color='red')  # we already handled the x-label with ax1
+    ax2.plot(data_pob_agg['dia'][1:], data_pob_agg['deaths'].diff()[1:], color='red', label='Fallecimientos')
+    ax2.tick_params(axis='y')
+    ax2.set_ylim(0)
+
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2, loc=0)
+
+    fig.tight_layout() 
+    st.pyplot()
+
     dia_select = [d for d in data_pob_agg['dia'][1:]]
     day_format_func = lambda x: x.strftime('%Y-%m-%d') 
     dia_study = st.selectbox('Día',dia_select,key='day_informe',index=len(dia_select)-1,format_func=day_format_func)
@@ -266,16 +289,20 @@ if section_ind=='Informe diario':
     st.write('Nuevos fallecimientos: ',extract_diffs('deaths', dia_study))
     st.write('Nuevos casos hospitalizados: ',extract_diffs('hospit', dia_study))
     st.write('Nuevos ingresados en UCI: ',extract_diffs('ingr_UCI', dia_study))
+    st.write('Nuevos casos recuperados: ',extract_diffs('curados', dia_study))
 
     ca_name_inf = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='ca_informe')
     inf_data_ccaa = [extract_diffs_ccaa('total_casos', dia_study, ca_name_inf),\
     extract_diffs_ccaa('deaths', dia_study, ca_name_inf),\
     extract_diffs_ccaa('hospit', dia_study, ca_name_inf),\
-    extract_diffs_ccaa('ingr_UCI', dia_study, ca_name_inf)]
+    extract_diffs_ccaa('ingr_UCI', dia_study, ca_name_inf),\
+    extract_diffs_ccaa('curados', dia_study, ca_name_inf)]
     st.write('Nuevos casos confirmados: ',inf_data_ccaa[0])
     st.write('Nuevos fallecimientos: ',inf_data_ccaa[1])
     st.write('Nuevos casos hospitalizados: ',inf_data_ccaa[2])
     st.write('Nuevos ingresados en UCI: ',int(inf_data_ccaa[3]))
+    st.write('Nuevos casos recuperados: ',int(inf_data_ccaa[4]))
+    
 
     st.write('Nota: Los hospitalizados empezaron a informarse a partir del 20 de marzo de 2020.')
 
@@ -322,7 +349,7 @@ if section_ind=='Series temporales: Estudio a corto plazo':
     validación, no de calibración, y algunos de los errores estimados.
     ''')
     data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-    data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'pob']].groupby('dia').agg('sum').reset_index()
+    data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'curados','pob']].groupby('dia').agg('sum').reset_index()
     d = list(data_pob_agg['deaths'])
     post_days = 5
     geom_days = 5
@@ -497,7 +524,7 @@ if section_ind=='SIR: Estudio a largo plazo':
 
     if all_ccaa:
         data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-        data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'pob']].groupby('dia').agg('sum').reset_index()
+        data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'curados', 'pob']].groupby('dia').agg('sum').reset_index()
         data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
         observed = list(data_pob_agg['pct_death_pob']) + list(np.repeat(None,max_days-len(data_pob_agg['pct_death_pob'])))
         n_obs = len(list(data_pob_agg['pct_death_pob']))
