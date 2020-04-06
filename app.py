@@ -442,6 +442,9 @@ if section_ind=='Series temporales: Estudio a corto plazo':
                         'Pred_3_smooth_error':"{:.2%}",
                         'Pred_2_smooth_error':"{:.2%}",
                         'Pred_1_smooth_error':"{:.2%}"}, na_rep=""))
+    
+    st.write('Nota: El error se calcula de la forma siguiente:')
+    st.latex(r'Error = \frac{Predicción-Observado}{Observado}')
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
@@ -515,6 +518,8 @@ if section_ind=='GLM: Estudio a corto plazo':
     .style.applymap(color_red, subset=['Error_until_{}'.format(days_fut_fmt[-4-i]) for i in range(5,9)])
 
     st.table(diffs)
+    st.write('Nota: El error se calcula de la forma siguiente:')
+    st.latex(r'Error = \frac{Predicción-Observado}{Observado}')
     
 
 if section_ind=='SIR: Estudio a largo plazo':
