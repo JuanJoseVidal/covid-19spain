@@ -95,7 +95,7 @@ def remove_na(l,pct=False):
         return [str(int(x)) if str(x) != 'nan' and x != None  else "" for x in l]
 
 def extract_only_fut_preds(i):
-    return list(np.repeat(None,len(predict_fut[i])-3-i)) + [int(p) for p in predict_fut[i][(-3-i):]]
+    return list(np.repeat(None,len(predict_fut[i])-7-i)) + [int(p) for p in predict_fut[i][(-7-i):]]
 
 # The SIR model differential equations.
 def deriv(y, t, N, beta, gamma):
@@ -136,8 +136,8 @@ def train_glm(response):
             res.append(mod.fit())
             data_plot = data_red.query(f'CCAA_Name=="{ca}"')[['day',response]]
             if i==0:
-                response_df.update({ca:list(data_plot[response]) + list(np.repeat(None,3+i))})
-            days_fut = list(data_plot['day']) + list(range(data_plot['day'].max()+1,data_plot['day'].max()+4+i))
+                response_df.update({ca:list(data_plot[response]) + list(np.repeat(None,7+i))})
+            days_fut = list(data_plot['day']) + list(range(data_plot['day'].max()+1,data_plot['day'].max()+8+i))
 
             predict_fut_ccaa.append([predict_model(res[i],ca,d) for d in days_fut])
         predict_df.update({ca:predict_fut_ccaa})
@@ -156,6 +156,12 @@ def train_glm(response):
     predict_df_3 = pd.DataFrame({ca:predict_df[ca][3] for ca in list(ccaa_dict.keys())})
     predict_df_4 = pd.DataFrame({ca:predict_df[ca][4] for ca in list(ccaa_dict.keys())})
     predict_df_full = [predict_df_0, predict_df_1, predict_df_2, predict_df_3, predict_df_4]
+
+    for i in range(len(predict_df_full)):
+        predict_df_full[i] = predict_df_full[i].applymap(lambda x: x[0])
+        for ca in list(ccaa_dict.keys()):
+            predict_df_full[i][ca].loc[predict_df_full[i][ca].idxmax():] = predict_df_full[i][ca].max()
+
     return predict_df_full, response_df, days_fut_fmt
 
 def predict_geoserie(d,remove,post_days,geom_days,day_ini):
@@ -455,7 +461,7 @@ if section_ind=='GLM: Estudio a corto plazo':
         ca_select = 'Spain'
         predict_fut = [predict_df_full[i].sum(1) for i in range(len(predict_df_full))]
         response_fut = pd.DataFrame(response_df).sum(1)
-        response_fut[-3:] = None
+        response_fut[-7:] = None
     else:
         ca_select = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='ca_name_glm')
         predict_fut = [pred_ca[ca_select] for pred_ca in predict_df_full]
@@ -468,7 +474,7 @@ if section_ind=='GLM: Estudio a corto plazo':
     ax = fig.add_subplot(111, axisbelow=True)
 
     for i in range(len(predict_fut)):
-        ax.plot(days_fut_fmt, predict_fut[i], 'b', alpha=0.5, lw=2, label='Predicted, until {}'.format(days_fut_fmt[-4-i]),color=newcolors[i])
+        ax.plot(days_fut_fmt, predict_fut[i], 'b', alpha=0.5, lw=2, label='Predicted, until {}'.format(days_fut_fmt[-8-i]),color=newcolors[i])
     ax.plot(days_fut_fmt, response_fut, 'r', alpha=0.5, lw=3, label='Observed')
 
     ax.set_xlabel('Día')
@@ -488,25 +494,25 @@ if section_ind=='GLM: Estudio a corto plazo':
 
     st.table(pd.DataFrame({'Day':days_fut_fmt,
                 'Observed':remove_na(response_fut),
-                'Pred_unt_{}'.format(days_fut_fmt[-4-4]):remove_na(extract_only_fut_preds(4)),
-                'Pred_unt_{}'.format(days_fut_fmt[-4-3]):remove_na(extract_only_fut_preds(3)),
-                'Pred_unt_{}'.format(days_fut_fmt[-4-2]):remove_na(extract_only_fut_preds(2)),
-                'Pred_unt_{}'.format(days_fut_fmt[-4-1]):remove_na(extract_only_fut_preds(1)),
-                'Pred_unt_{}'.format(days_fut_fmt[-4-0]):remove_na(extract_only_fut_preds(0))})\
-    .style.applymap(color_red, subset=['Pred_unt_{}'.format(days_fut_fmt[-1-i]) for i in range(3,8)]))
+                'Pred_unt_{}'.format(days_fut_fmt[-8-4]):remove_na(extract_only_fut_preds(4)),
+                'Pred_unt_{}'.format(days_fut_fmt[-8-3]):remove_na(extract_only_fut_preds(3)),
+                'Pred_unt_{}'.format(days_fut_fmt[-8-2]):remove_na(extract_only_fut_preds(2)),
+                'Pred_unt_{}'.format(days_fut_fmt[-8-1]):remove_na(extract_only_fut_preds(1)),
+                'Pred_unt_{}'.format(days_fut_fmt[-8-0]):remove_na(extract_only_fut_preds(0))})\
+    .style.applymap(color_red, subset=['Pred_unt_{}'.format(days_fut_fmt[-1-i]) for i in range(7,12)]))
 
     error = []
 
     for i in range(1,5):
-        error.append(list(np.repeat(None,4-i)) + [(p-r)/r for r,p in zip(response_fut[(-3-i):-3],extract_only_fut_preds(i)[(-3-i):-3])])
+        error.append(list(np.repeat(None,4-i)) + [(p-r)/r for r,p in zip(response_fut[(-7-i):-7],extract_only_fut_preds(i)[(-7-i):-7])])
 
-    diffs = pd.DataFrame({'Día':days_fut_fmt[-7:-3],
-                        'Observado': remove_na(response_fut[-7:-3]),
-                        'Error_until_{}'.format(days_fut_fmt[-4-4]):remove_na(error[3],pct=True),
-                        'Error_until_{}'.format(days_fut_fmt[-4-3]):remove_na(error[2],pct=True),
-                        'Error_until_{}'.format(days_fut_fmt[-4-2]):remove_na(error[1],pct=True),
-                        'Error_until_{}'.format(days_fut_fmt[-4-1]):remove_na(error[0],pct=True)})\
-    .style.applymap(color_red, subset=['Error_until_{}'.format(days_fut_fmt[-4-i]) for i in range(1,5)])
+    diffs = pd.DataFrame({'Día':days_fut_fmt[-11:-7],
+                        'Observado': remove_na(response_fut[-11:-7]),
+                        'Error_until_{}'.format(days_fut_fmt[-8-4]):remove_na(error[3],pct=True),
+                        'Error_until_{}'.format(days_fut_fmt[-8-3]):remove_na(error[2],pct=True),
+                        'Error_until_{}'.format(days_fut_fmt[-8-2]):remove_na(error[1],pct=True),
+                        'Error_until_{}'.format(days_fut_fmt[-8-1]):remove_na(error[0],pct=True)})\
+    .style.applymap(color_red, subset=['Error_until_{}'.format(days_fut_fmt[-4-i]) for i in range(5,9)])
 
     st.table(diffs)
     
