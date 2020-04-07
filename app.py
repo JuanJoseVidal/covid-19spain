@@ -339,6 +339,10 @@ if section_ind=='Introducción':
 
 if section_ind=='Informe diario':
     st.title('Informe de evolución diaria.')
+    st.write('''En este apartado se muestra la evolución histórica del virus, tanto de contagiados, fallecidos, ingresados en UCI,
+    requeridos de hospitalización como de recuperados. Primero encontramos los datos acumulados a fecha indicada.
+    En el gráfico podemos ver los datos diarios y posteriormente podemos seleccionar los datos diarios por comunidad autónoma.
+    ''')
     data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
     data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'curados', 'pob']].groupby('dia').agg('sum').reset_index()
     data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
@@ -396,10 +400,15 @@ if section_ind=='Informe diario':
     st.write('Nuevos casos recuperados: ',int(inf_data_ccaa[4]))
     
 
-    st.write('Nota: Los hospitalizados empezaron a informarse a partir del 20 de marzo de 2020.')
+    st.write('Nota: Los hospitalizados empezaron a informarse por comunidad autónoma a partir del 20 de marzo de 2020.')
 
 if section_ind=='Evolución por género':
     st.title('Evolución por género')
+    st.write('''En este apartado incluímos los gráficos de casos infectados según el género separado por edades. Posteriormente
+    vemos los gráficos de la letalidad (fallecimientos/casos detectados) para cada género según su grupo de edad. Las distintas
+    líneas representan la letalidad acumulada al día indicado en la leyenda, no confundir con la letalidad diaria, que sería sólo
+    tomando los casos ocurridos tal día.
+    ''')
     data_sexage = load_data_sexage()
 
     data_fem_last = data_sexage.query('dia=="{}"&gender=="Fem"'.format(data_sexage["dia"].max()))
@@ -505,9 +514,9 @@ if section_ind=='Series temporales: Estudio a corto plazo':
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
-    st.write('''En este apartado se estudia la evolución a corto plazo a nivel de CCAA según un modelo GLM Poisson con el día y la
-    comunidad autónoma como únicos factores de riesgo. Hay que tener en cuenta que este modelo predecirá bien los próximos días pero
-    no lo hará para un largo plazo, ya que en ningún momento se tiene en cuenta una futura bajada del contagio.
+    st.write('''En este apartado se estudia la evolución a corto plazo a nivel de CCAA según un modelo GLM  con estructura de error 
+    Poisson con link logit, usando distintas transformaciones no lineares del día y la comunidad autónoma como factores de riesgo, al igual
+    que una booleana para indicar los días de confinamiento y otra booleana para indicar sólo Madrid.
     ''')
     data, rel, ccaa_dict, n_prov, _, _ = load_data()
     responses_display = {'deaths':'Fallecimientos', 'total_casos':'Casos observados'}
@@ -684,10 +693,12 @@ if section_ind=='Documentación':
 
 if section_ind=='Acerca del proyecto':
     st.title('Acerca del proyecto')
-    '''Este es un proyecto para monitorizar y predecir la evolución del COVID-19 en España desarrollado por Juan José Vidal y Francisco Gabriel Morillas.
+    '''Este es un proyecto para monitorizar y predecir la evolución del COVID-19 en España desarrollado por Juan José Vidal, 
+    Francisco Gabriel Morillas y José Valero.
     Los datos han sido recopilados a partir de los informes de actualización del Ministerio de Sanidad.
-    El software utilizado mayoritariamente Python. Los datos los recogemos en Excel, los manipulamos y predecimos con Python,
-    presentamos el dashboard con Streamlit y publicamos la app en Heroku.
+    El software utilizado mayoritariamente Python. Paralelamente hemos usado también MatLab.
+    Los datos los recogemos en Excel, los manipulamos y predecimos con Python, presentamos el dashboard con Streamlit y 
+    publicamos la app en Heroku.
     '''
 
     st.title('Información sobre los autores')
