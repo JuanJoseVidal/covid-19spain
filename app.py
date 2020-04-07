@@ -131,7 +131,6 @@ def train_glm(response):
             if i==0:
                 data_red = data.copy()
             else:
-                data_test = data.loc[data['dia']>=np.sort(data['dia'].unique())[-n_days_test]]
                 data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
 
             # Model
