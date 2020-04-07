@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime
+import math
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
@@ -134,8 +135,7 @@ def train_glm(response):
                 data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
 
             # Model
-            data_model = data_red[['day','CCAA',response, 'confin','madrid']].copy()
-            y, X = dmatrices(f'{response} ~ I(day**2) + I(day**3) + C(CCAA)*day + confin + C(madrid)', data=data_model, return_type='dataframe')
+            y, X = dmatrices(f'{response} ~ I(day**2) + I(day**3) + C(CCAA)*day + confin + C(madrid)', data=data_red, return_type='dataframe')
 
             mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
             res.append(mod.fit())
@@ -204,9 +204,90 @@ def predict_geoserie(d,remove,post_days,geom_days,day_ini):
 
     preds_fut_long = list(np.repeat(None,len(d))) + preds_fut
     return d_long, preds_fut_long, days_long
+
+def Runge4D(f1,f2,f3,f4,h,t0,T,x0,y0,z0,v0,beta,beta1,gamma,sigma,alfa,N):
     
+    N1 = math.ceil((T-t0)/h)
+    x = np.repeat(None, N1+1)
+    y = np.repeat(None, N1+1)
+    z = np.repeat(None, N1+1)
+    v = np.repeat(None, N1+1)
+    t = np.linspace(t0,T,math.ceil(N1+1))
+    x[0] = x0
+    y[0] = y0
+    z[0] = z0
+    v[0] = v0
+
+    for i in range(N1):
+        r1=f1(t[i],x[i],y[i],z[i],v[i],beta,beta1,gamma,sigma,alfa,N)
+        u1=f2(t[i],x[i],y[i],z[i],v[i],beta,beta1,gamma,sigma,alfa,N)
+        v1=f3(t[i],x[i],y[i],z[i],v[i],beta,beta1,gamma,sigma,alfa,N)
+        d1=f4(t[i],x[i],y[i],z[i],v[i],beta,beta1,gamma,sigma,alfa,N)
+
+        z1=x[i]+h*r1/2
+        w1=y[i]+h*u1/2
+        p1=z[i]+h*v1/2
+        g1=v[i]+h*d1/2
+
+        r2=f1(t[i]+h/2,z1,w1,p1,g1,beta,beta1,gamma,sigma,alfa,N)
+        u2=f2(t[i]+h/2,z1,w1,p1,g1,beta,beta1,gamma,sigma,alfa,N)
+        v2=f3(t[i]+h/2,z1,w1,p1,g1,beta,beta1,gamma,sigma,alfa,N)
+        d2=f4(t[i]+h/2,z1,w1,p1,g1,beta,beta1,gamma,sigma,alfa,N)
+
+        z2=x[i]+h*r2/2
+        w2=y[i]+h*u2/2
+        p2=z[i]+h*v2/2
+        g2=v[i]+h*d2/2
+                    
+        r3=f1(t[i]+h/2,z2,w2,p2,g2,beta,beta1,gamma,sigma,alfa,N)
+        u3=f2(t[i]+h/2,z2,w2,p2,g2,beta,beta1,gamma,sigma,alfa,N)
+        v3=f3(t[i]+h/2,z2,w2,p2,g2,beta,beta1,gamma,sigma,alfa,N)
+        d3=f4(t[i]+h/2,z2,w2,p2,g2,beta,beta1,gamma,sigma,alfa,N)
+
+        z3=x[i]+h*r3
+        w3=y[i]+h*u3
+        p3=z[i]+h*v3
+        g3=v[i]+h*d3
+                    
+        r4=f1(t[i]+h,z3,w3,p3,g3,beta,beta1,gamma,sigma,alfa,N)
+        u4=f2(t[i]+h,z3,w3,p3,g3,beta,beta1,gamma,sigma,alfa,N)
+        v4=f3(t[i]+h,z3,w3,p3,g3,beta,beta1,gamma,sigma,alfa,N)
+        d4=f4(t[i]+h,z3,w3,p3,g3,beta,beta1,gamma,sigma,alfa,N)
+
+        x[i+1]=x[i]+h*(r1+2*r2+2*r3+r4)/6
+        y[i+1]=y[i]+h*(u1+2*u2+2*u3+u4)/6
+        z[i+1]=z[i]+h*(v1+2*v2+2*v3+v4)/6
+        v[i+1]=v[i]+h*(d1+2*d2+2*d3+d4)/6
+
+    return t, x, y, z, v
+
+def f1(t,x,y,z,v,beta,beta1,gamma,sigma,alfa,N):
+    return -(beta-beta1*(1-np.exp(-alfa*(t-22))))*(1-0.1*(0*y+z)/N)**200*x*(y+z)/N
+def f2(t,x,y,z,v,beta,beta1,gamma,sigma,alfa,N):
+    return (beta-beta1*(1-np.exp(-alfa*(t-22))))*(1-0.1*(0*y+z)/N)**200*x*(y+z)/N-sigma*y
+def f3(t,x,y,z,v,beta,beta1,gamma,sigma,alfa,N):
+    return sigma*y-gamma*z
+def f4(t,x,y,z,v,beta,beta1,gamma,sigma,alfa,N):
+    return gamma*z
+
+def SEIRRest(N,E0,I0,R0,beta,beta1,gamma,sigma,T,alfa):
+    
+    S0=N-I0-R0-E0
+
+    t,S,E,I,R = Runge4D(f1,f2,f3,f4,0.05,22,T,S0,E0,I0,R0,beta,beta1,gamma,sigma,alfa,N)
+    return t,S,E,I,R
+
+def extract_time(vect):
+    vect_time = []
+    for i in range(len(vect)):
+        if i%20==0:
+            vect_time.append(vect[i])
+        else:
+            pass
+    return vect_time
+
 st.sidebar.title('Índice')
-section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Evolución por género', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
+section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Evolución por género', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SEIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
 if section_ind=='Introducción':
     st.title('Proyección sobre la evolución de la incidencia del virus COVID-19')
@@ -246,13 +327,13 @@ if section_ind=='Introducción':
     st.markdown('''
     ## Horizonte de predicción y variables analizadas
     Las estimaciones son útiles en el corto plazo (1-3 días), las variables analizadas son
-    el número de fallecidos, y el número de ingresos en UCI, para el total acumulado en
-    el conjunto del territorio nacional.
+    el número de infectados, el número de fallecidos, el número de recuperados y el número de ingresos en UCI, 
+    para el total acumulado en el conjunto del territorio nacional como por comunidad autónoma.
     ''')    
     st.markdown('''
     ## Datos y Fuentes de Información
-    Los datos utilizados son los publicados por el Gobierno Español, aunque en la fase
-    inicial se utilizaron los datos recopilados y depurados por el grupo de trabajo
+    Los datos utilizados son los publicados por el Gobierno Español en sus actualizaciones diarias, 
+    aunque en la fase inicial se utilizaron los datos recopilados y depurados por el grupo de trabajo
     Datadista (Github) y los proporcionados por el Johns Hopkins CSSE.
     ''')
 
@@ -419,35 +500,6 @@ if section_ind=='Series temporales: Estudio a corto plazo':
                         'Pred_3_error':"{:.2%}",
                         'Pred_2_error':"{:.2%}",
                         'Pred_1_error':"{:.2%}"}, na_rep=""))
-    st.markdown('## Con suavizado')
-    results_smt_aux = pd.DataFrame({'Día': [d_f.strftime('%Y-%m-%d') for d_f in days_long],
-                        'Observado': d_long_0,
-                        'Pred_3':[int(x) if x is not None else None for x in preds_fut_long_3],
-                        'Pred_2_smooth':(results['Pred_3']+results['Pred_2'])/2,
-                        'Pred_1_smooth':(results['Pred_3']+results['Pred_2']+results['Pred_1'])/3,
-                        'Pred_0_smooth':(results['Pred_3']+results['Pred_2']+results['Pred_1']+results['Pred_0'])/4})
-    results_smt = results_smt_aux.where(pd.notnull(results_smt_aux), None)
-
-    results_fmt_smt = pd.DataFrame({'Día': [d_f.strftime('%Y-%m-%d') for d_f in days_long],
-                            'Observado': remove_na(d_long_0),
-                            'Pred_3':remove_na([int(x) if x is not None else None for x in preds_fut_long_3]),
-                            'Pred_2_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_2_smooth']]),
-                            'Pred_1_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_1_smooth']]),
-                            'Pred_0_smooth':remove_na([int(x) if x is not None else None for x in results_smt['Pred_0_smooth']])})
-
-    st.table(results_fmt_smt.style.applymap(color_red,subset=['Pred_0_smooth','Pred_1_smooth','Pred_2_smooth','Pred_3']))
-
-    diffs_smt = pd.DataFrame({'Día':results_smt['Día'],
-                        'Observado': d_long_0,
-                        'Pred_3_smooth_error':(results_smt['Observado']-results_smt['Pred_3'])/results_smt['Pred_3'],
-                        'Pred_2_smooth_error':(results_smt['Observado']-results_smt['Pred_2_smooth'])/results_smt['Pred_2_smooth'],
-                        'Pred_1_smooth_error':(results_smt['Observado']-results_smt['Pred_1_smooth'])/results_smt['Pred_1_smooth']})
-
-    st.table(diffs_smt[(-post_days-3):-post_days].reset_index().drop('index',axis=1).style.applymap(color_red,subset=['Pred_1_smooth_error','Pred_2_smooth_error','Pred_3_smooth_error']).format({'Observado':"{:.0f}",
-                        'Pred_3_smooth_error':"{:.2%}",
-                        'Pred_2_smooth_error':"{:.2%}",
-                        'Pred_1_smooth_error':"{:.2%}"}, na_rep=""))
-    
     st.write('Nota: El error se calcula de la forma siguiente:')
     st.latex(r'Error = \frac{Predicción-Observado}{Observado}')
 
@@ -525,135 +577,75 @@ if section_ind=='GLM: Estudio a corto plazo':
     st.table(diffs)
     st.write('Nota: El error se calcula de la forma siguiente:')
     st.latex(r'Error = \frac{Predicción-Observado}{Observado}')
-    
 
-if section_ind=='SIR: Estudio a largo plazo':
-    st.title('Modelos SIR: Estudio a largo plazo')
-    st.write('''En este apartado se estudia la evolución a largo plazo a nivel de país o CCAA, según interese, y se ajusta el parámetro
-    de contagio correspondiente al modelo SIR explicado en el apartado Documentación cada vez que se selecciona un periodo. Este modelo
-    intenta predecir el pico de casos a largo terminio teniendo en cuenta una recuperación e inmunidad posterior por la sociedad.
+
+if section_ind=='SEIR: Estudio a largo plazo':
+    st.title('Modelos SEIR: Estudio a largo plazo')
+    st.write('''En este apartado se estudia la evolución a largo plazo a nivel de país. Previamente se han ajustado los parámetros 
+    correspondientes al modelo SEIR explicado en el apartado Documentación. Este modelo intenta predecir el pico de casos a largo 
+    terminio teniendo en cuenta una recuperación e inmunidad posterior por la sociedad, al igual que una limitación de personas expuestas
+    al momento al virus y el impacto de las medidas tomadas por el gobierno.
     ''')
     
-    all_ccaa = st.checkbox('Todo el país / CCAA', True)
+    data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
+    data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'curados', 'pob']].groupby('dia').agg('sum').reset_index()
+    data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
+    
+    data_dia = data_pob_agg[(data_pob_agg['dia'] == '2020-03-21')].reset_index(drop=True)
+    data_study = data_pob_agg[(data_pob_agg['dia'] >= '2020-03-21')].reset_index(drop=True)
+    data_dia['curados'] = 2575 # El dato para el 21 de marzo está en el informe pero agregado y no por CCAA
+    
+    T = 60
 
-    max_days = 201
+    alfa = 0.16
+    gamma = 0.06
+    beta = 0.16
+    beta_1 = 0.13
 
-    if all_ccaa:
-        data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-        data_pob_agg = data_pob[['dia', 'total_casos', 'deaths', 'hospit', 'ingr_UCI', 'curados', 'pob']].groupby('dia').agg('sum').reset_index()
-        data_pob_agg['pct_death_pob'] = data_pob_agg['deaths']/data_pob_agg['pob']
-        observed = list(data_pob_agg['pct_death_pob']) + list(np.repeat(None,max_days-len(data_pob_agg['pct_death_pob'])))
-        n_obs = len(list(data_pob_agg['pct_death_pob']))
-        # Total population, N.
-        N = data_pob_agg['pob'][0]
-        # Initial number of infected and recovered individuals, I0 and R0.
-        I0 = data_pob_agg.loc[data_pob_agg['dia']==data_pob_agg['dia'].min()]['total_casos'][0]
-        ca_name_long = 'España'
+    t,S,E,I,R = SEIRRest(N = data_dia['pob'][0],
+                        E0 = 40000,
+                        I0 = data_dia['total_casos'][0] - data_dia['deaths'][0] - data_dia['curados'][0],
+                        R0 = data_dia['deaths'][0] + data_dia['curados'][0],
+                        beta = beta,
+                        beta1 = beta_1,
+                        gamma = gamma,
+                        sigma = 1/7,
+                        T = T,
+                        alfa = alfa)
 
-    else:
-        data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
-        ca_name_long = st.selectbox('CCAA',list(ccaa_dict.keys()),index=12,key='long')
-        ca_number = ccaa_dict[ca_name_long]
-        ca_name = rel.loc[rel['CCAA']==ca_number].reset_index()['CCAA_Name'][0]
-        data_model = data_pob.loc[data_pob['CCAA']==ca_number].reset_index()[['CCAA', 'total_casos', 'pct_death_pob', 'pob', 'dia']]
-        observed = list(data_model['pct_death_pob']) + list(np.repeat(None,max_days-len(data_model['pct_death_pob'])))
-        n_obs = len(list(data_model['pct_death_pob']))
-        # Total population, N.
-        N = pob.loc[pob['CCAA']==ca_number].reset_index()['pob'][0]
-        # Initial number of infected and recovered individuals, I0 and R0.
-        I0 = data_model.loc[data_model['dia']==data_model['dia'].min()]['total_casos'][0]
-
-    min_day = data_pob['dia'].min()
-    days = [min_day]
+    max_days = len(extract_time(t))
+    days = [data_dia['dia'][0]]
     for i in range(max_days-1): 
-        days.append(days[i] + datetime.timedelta(days=1))
-    days_str = [d.strftime('%Y-%m-%d') for d in days]
-    beta_grid = np.linspace(0.1, 0.5, 41)
+            days.append(days[i] + datetime.timedelta(days=1))
+    days_fut_fmt = [d.strftime('%Y-%m-%d') for d in days]
 
-    R0 = 0
-    # Everyone else, S0, is susceptible to infection initially.
-    S0 = N - I0 - R0
-    # Mean recovery rate, gamma, (in 1/days).
-    gamma = 1/14
-    # A grid of time points (in days)
-    t = np.linspace(0, max_days-1, max_days)
-    # Initial conditions vector
-    y0 = S0, I0, R0
+    observed = list(data_study['total_casos']-data_study['deaths']-data_study['curados']) + list(np.repeat(None,len(extract_time(t))-len(data_study['total_casos'])))
 
-    rmse = []
-    for b in beta_grid:
-        # Contact rate, beta
-        beta = b
-        # Integrate the SIR equations over the time grid, t.
-        ret = odeint(deriv, y0, t, args=(N, beta, gamma))
-        S, I, R = ret.T
-        rmse.append(np.sqrt(sum((np.log(observed[n_obs-4:n_obs])-np.log(I[n_obs-4:n_obs]/N))**2)))
+    rd = [r+d for r,d in zip(data_study['deaths'],data_study['curados'])]
+    rd = rd + list(np.repeat(None,len(extract_time(t))-len(rd)))
 
-    val, idx = min((val, idx) for (idx, val) in enumerate(rmse))
-    b_opt = beta_grid[idx]
-    beta = b_opt
+    st.write('Los parámetros ajustados del modelo son los siguientes:')
+    st.latex(r'\alpha = {}\ \ \ \gamma = {}'.format(alfa,gamma))
+    st.latex(r'\beta = {}\ \ \ \beta_1 = {}'.format(beta,beta_1))
 
-    # Integrate the SIR equations over the time grid, t.
-    ret = odeint(deriv, y0, t, args=(N, beta, gamma))
-    S, I, R = ret.T
-
-    st.write('El parámetro ajustado de contagio es: {:.2f}'.format(b_opt))
     # Plot the data on three separate curves for S(t), I(t) and R(t)
     fig = plt.figure(facecolor='w',figsize=(12,9))
     ax = fig.add_subplot(111, axisbelow=True)
-    ax.plot(days_str, S/N, 'b', alpha=0.5, lw=2, label='Susceptible')
-    ax.plot(days_str, I/N, 'r', alpha=0.5, lw=2, label='Infected')
-    ax.plot(days_str, R/N, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
-    ax.plot(days_str,observed, 'black', alpha=1, lw=3, label='Observed Infected')
+    #ax.plot(t, S/pob, 'b', alpha=0.5, lw=2, label='Susceptible')
+    ax.plot(days_fut_fmt, extract_time(I), 'lightcoral', alpha=0.5, lw=3, label='Infected')
+    ax.plot(days_fut_fmt, extract_time(R), 'lightgreen', alpha=0.5, lw=3, label='Recovered/Death')
+    ax.plot(days_fut_fmt, extract_time(E), 'khaki', alpha=0.5, lw=3, label='Exposed')
+    ax.plot(days_fut_fmt, observed, 'darkred', alpha=0.5, lw=3, label='Infected (observed)')
+    ax.plot(days_fut_fmt, rd, 'darkgreen', alpha=0.5, lw=3, label='Recovered/Death (observed)')
     ax.set_xlabel('Time/days')
-    ax.set_ylabel('% People')
-    ax.set_ylim(0,1.1)
-    #ax.set_ylim(0,0.001)
-    #ax.set_xlim(0,20)
-    loc = plticker.MultipleLocator(base=10) # this locator puts ticks at regular intervals
-    ax.xaxis.set_major_locator(loc)
+    ax.set_ylabel('People')
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=2,rotation=45)
     plt.xticks(ha='right')
-    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
-    legend = ax.legend()
-    legend.get_frame().set_alpha(0.5)
-    for spine in ('top', 'right', 'bottom', 'left'):
-        ax.spines[spine].set_visible(False)
-    plt.title('{}: Prediction of the evolution of the COVID-19'.format(ca_name_long))
-    st.pyplot()
-
-    detail_lim = len(list(data_pob['dia'].unique()))
-        # Plot the data on three separate curves for S(t), I(t) and R(t)
-    fig = plt.figure(facecolor='w',figsize=(12,9))
-    ax = fig.add_subplot(111, axisbelow=True)
-    ax.plot(days_str, S/N, 'b', alpha=0.5, lw=2, label='Susceptible')
-    ax.plot(days_str, I/N, 'r', alpha=0.5, lw=2, label='Infected')
-    ax.plot(days_str, R/N, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
-    ax.plot(days_str,observed, 'black', alpha=1, lw=3, label='Observed Infected')
-    ax.set_xlabel('Time/days')
-    ax.set_ylabel('% People')
-    ax.set_ylim(0,((I/N)[:detail_lim]).max()*1.1)
-    #ax.set_ylim(0,0.001)
-    ax.set_xlim(0,detail_lim)
     loc = plticker.MultipleLocator(base=3) # this locator puts ticks at regular intervals
     ax.xaxis.set_major_locator(loc)
-    ax.yaxis.set_tick_params(length=0)
-    ax.xaxis.set_tick_params(length=2,rotation=45)
-    plt.xticks(ha='right')
-    ax.grid(b=True, which='major', c='grey', lw=0.5, ls='-')
     legend = ax.legend()
-    legend.get_frame().set_alpha(0.5)
-    for spine in ('top', 'right', 'bottom', 'left'):
-        ax.spines[spine].set_visible(False)
-    plt.title('{}: Detail of prediction of the evolution of the COVID-19'.format(ca_name_long))
     st.pyplot()
-
-    val_inf, idx_inf = max((val, idx) for (idx, val) in enumerate(I))
-    st.write('Se espera que en {}, el {} se alcance el pico máximo de infectados con un {:.2%} de la población afectada.'.format(ca_name_long,days_str[idx_inf],val_inf/N))
-    st.write('''Nota: Este modelo SIR representa el escenario que se esperaría sin tomar ninguna medida de contención. 
-    En la actualidad, estamos trabajando en el modelo SEIR para ampliar los resultados.
-    ''')
 
 if section_ind=='Documentación':
     st.title('Documentación')
