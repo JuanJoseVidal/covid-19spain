@@ -7,3 +7,4 @@ patsy==0.5.1
 xlrd>=1.2.0
 scipy==1.4.1
 geopandas==0.4.1
+mapclassify==2.0.1
