@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime
+import geopandas as gpd
 import math
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
@@ -34,6 +35,13 @@ def load_data_sexage():
     data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
     data_sexage = data_sexage.query('gender!="Tot"')
     return data_sexage
+
+@st.cache
+def load_map():
+    mapa = gpd.read_file('data/CCAA.shp').drop([4,17,18],axis=0)
+    mapa['coords'] = mapa['geometry'].apply(lambda x: x.representative_point().coords[:])
+    mapa['coords'] = [coords[0] for coords in mapa['coords']]
+    return mapa
 
 def transform_day_glm(d):
     if d.month <= 3:
@@ -285,8 +293,25 @@ def extract_time(vect):
             pass
     return vect_time
 
+def plot_map(var):
+    fig,axes = plt.subplots(figsize=[15,8])
+    axes1 = mapa_winfo.plot(var, 
+                            cmap='RdYlGn_r',
+                            ax=axes, 
+                            legend=False, 
+                            edgecolor='grey', 
+                            scheme='fisher_jenks')
+    axes1.set_title(cool_titles[var])
+    axes1.set_xlim([-10,5])
+    axes1.set_ylim([36,44])
+    for idx, row in mapa_winfo.iterrows():
+        plt.annotate(s='{:.2%}'.format(row[var]), 
+                     xy=row['coords'],
+                     horizontalalignment='center')
+    st.pyplot()
+
 st.sidebar.title('Índice')
-section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Evolución por género', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SEIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
+section_ind = st.sidebar.radio('',['Introducción', 'Informe diario', 'Evolución por género', 'Mapas', 'Series temporales: Estudio a corto plazo','GLM: Estudio a corto plazo','SEIR: Estudio a largo plazo','Documentación','Acerca del proyecto'])
 
 if section_ind=='Introducción':
     st.title('Proyección sobre la evolución de la incidencia del virus COVID-19')
@@ -438,6 +463,28 @@ if section_ind=='Evolución por género':
 
     st.markdown('## Evolución de la letalidad para hombres')
     plot_letality_gender('Masc')
+
+if section_ind=='Mapas':
+    data, rel, ccaa_dict, n_prov, pob, data_pob = load_data()
+    mapa = load_map()
+
+    data_study = data_pob.loc[data_pob['dia']==data_pob['dia'].max()].reset_index(drop=True)
+    mapa_winfo = mapa.merge(data_study,on=['CCAA','CCAA_Name'],how='left')
+
+    cool_titles = {'pct_casos_pob': '% de casos infectados sobre población',
+    'pct_death_casos':'% de fallecimientos sobre casos infectados',
+    'pct_may65': '% de mayores de 65 años'}
+    st.title('Mapas a última situación')
+    st.markdown('## Acumulado a día {}.'.format(data_pob['dia'].max().strftime('%Y-%m-%d')))
+    
+    st.markdown('### {}'.format(cool_titles['pct_casos_pob']))
+    plot_map('pct_casos_pob')
+
+    st.markdown('### {}'.format(cool_titles['pct_death_casos']))
+    plot_map('pct_death_casos')
+
+    st.markdown('### {}'.format(cool_titles['pct_may65']))
+    plot_map('pct_may65')
 
 if section_ind=='Series temporales: Estudio a corto plazo':
     st.title('Series temporales: Estudio a corto plazo')
