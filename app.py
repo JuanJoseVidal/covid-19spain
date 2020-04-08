@@ -476,7 +476,10 @@ if section_ind=='Mapas':
 
     cool_titles = {'pct_casos_pob': '% de casos infectados sobre población',
     'pct_death_casos':'% de fallecimientos sobre casos infectados',
-    'pct_may65': '% de mayores de 65 años'}
+    'pct_may65': '% de mayores de 65 años',
+    'pct_uci_casos':'% de ingresados en UCI sobre infectados',
+    'pct_hospit_casos':'% de hospitalizados sobre infectados',
+    'pct_curados_casos':'% de recuperados sobre infectados'}
     st.title('Mapas a última situación')
     st.markdown('## Acumulado a día {}.'.format(data_pob['dia'].max().strftime('%Y-%m-%d')))
     
@@ -497,6 +500,7 @@ if section_ind=='Mapas':
 
     st.markdown('### {}'.format(cool_titles['pct_may65']))
     plot_map('pct_may65')
+
 
 if section_ind=='Series temporales: Estudio a corto plazo':
     st.title('Series temporales: Estudio a corto plazo')
