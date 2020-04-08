@@ -28,6 +28,9 @@ def load_data():
     data_pob['pct_casos_pob'] = data_pob['total_casos']/data_pob['pob']
     data_pob['pct_death_casos'] = data_pob['deaths']/data_pob['total_casos']
     data_pob['pct_death_pob'] = data_pob['deaths']/data_pob['pob']
+    data_pob['pct_uci_casos'] = data_pob['ingr_UCI']/data_pob['total_casos']
+    data_pob['pct_curados_casos'] = data_pob['curados']/data_pob['total_casos']
+    data_pob['pct_hospit_casos'] = data_pob['hospit']/data_pob['total_casos']
     return data, rel, ccaa_dict, n_prov, pob, data_pob
 
 @st.cache
@@ -482,6 +485,15 @@ if section_ind=='Mapas':
 
     st.markdown('### {}'.format(cool_titles['pct_death_casos']))
     plot_map('pct_death_casos')
+
+    st.markdown('### {}'.format(cool_titles['pct_uci_casos']))
+    plot_map('pct_uci_casos')
+
+    st.markdown('### {}'.format(cool_titles['pct_hospit_casos']))
+    plot_map('pct_hospit_casos')
+
+    st.markdown('### {}'.format(cool_titles['pct_curados_casos']))
+    plot_map('pct_curados_casos')
 
     st.markdown('### {}'.format(cool_titles['pct_may65']))
     plot_map('pct_may65')
