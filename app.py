@@ -641,10 +641,10 @@ if section_ind=='SEIR: Estudio a largo plazo':
     ax = fig.add_subplot(111, axisbelow=True)
     #ax.plot(t, S/pob, 'b', alpha=0.5, lw=2, label='Susceptible')
     ax.plot(days_fut_fmt, extract_time(I), 'lightcoral', alpha=0.5, lw=3, label='Infected')
-    ax.plot(days_fut_fmt, extract_time(R), 'lightgreen', alpha=0.5, lw=3, label='Recovered/Death')
+    ax.plot(days_fut_fmt, extract_time(R), 'lightgreen', alpha=0.5, lw=3, label='Recovered & Death')
     ax.plot(days_fut_fmt, extract_time(E), 'khaki', alpha=0.5, lw=3, label='Exposed')
     ax.plot(days_fut_fmt, observed, 'darkred', alpha=0.5, lw=3, label='Infected (observed)')
-    ax.plot(days_fut_fmt, rd, 'darkgreen', alpha=0.5, lw=3, label='Recovered/Death (observed)')
+    ax.plot(days_fut_fmt, rd, 'darkgreen', alpha=0.5, lw=3, label='Recovered & Death (observed)')
     ax.set_xlabel('Time/days')
     ax.set_ylabel('People')
     ax.yaxis.set_tick_params(length=0)
@@ -655,6 +655,11 @@ if section_ind=='SEIR: Estudio a largo plazo':
     legend = ax.legend()
     st.pyplot()
 
+    val_inf, idx_inf = max((val, idx) for (idx, val) in enumerate(extract_time(I)))
+    st.write('Se espera que el {} se alcance el pico máximo de infectados con {:,.0f} personas afectadas.'.format(days_fut_fmt[idx_inf],val_inf))
+    st.write('''Cabe notar que los infectados incluidos en este apartado corresponden a los casos observados menos los fallecidos y los
+    recuperados. 
+    ''')
 if section_ind=='Documentación':
     st.title('Documentación')
     st.markdown('''
