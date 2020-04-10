@@ -743,7 +743,7 @@ if section_ind=='Documentación':
     7. La generación de escenarios alternativos y plausibles se está diseñando y
     ajustando para que pueda ser utilizado en la práctica.
     ''')
-
+ 
     st.markdown('''
     En relación con los **Modelos Lineares Generalizados**, estos son una generalización flexible de la regresión lineal ordinaria 
     que permite variables de respuesta que tienen modelos de distribución de errores distintos de una distribución normal. 
