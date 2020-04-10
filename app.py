@@ -743,7 +743,7 @@ if section_ind=='Documentación':
     7. La generación de escenarios alternativos y plausibles se está diseñando y
     ajustando para que pueda ser utilizado en la práctica.
     ''')
- 
+
     st.markdown('''
     En relación con los **Modelos Lineares Generalizados**, estos son una generalización flexible de la regresión lineal ordinaria 
     que permite variables de respuesta que tienen modelos de distribución de errores distintos de una distribución normal. 
@@ -769,6 +769,8 @@ if section_ind=='Acerca del proyecto':
     publicamos la app en Heroku.
     '''
 
+    st.markdown('El repositorio con los datos y el código se puede encontrar en el siguiente enlace: https://github.com/JuanJoseVidal/covid-19spain')
+    
     st.title('Información sobre los autores')
     st.markdown('''**Juan José Vidal Llana**  
     Senior Pricing Analyst en Allianz España y Freelancer Strategy Consultant.  
