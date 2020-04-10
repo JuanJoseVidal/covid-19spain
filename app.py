@@ -576,13 +576,14 @@ if section_ind=='Series temporales: Estudio a corto plazo':
 
 if section_ind=='GLM: Estudio a corto plazo':
     st.title('Modelos GLM: Estudio a corto plazo')
-    st.write('''En este apartado se estudia la evolución a corto plazo a nivel de CCAA según un modelo GLM  con estructura de error 
+    st.write('''En este apartado se estudia la evolución a corto plazo de los casos observados, fallecidos, hospitalizados e ingresados
+    en UCI a nivel de CCAA según un modelo GLM  con estructura de error 
     Poisson con link logit, usando distintas transformaciones no lineares del día y la comunidad autónoma como factores de riesgo, al igual
     que una booleana para indicar los días de confinamiento y otra booleana para indicar sólo Madrid.
     ''')
     data, rel, ccaa_dict, n_prov, _, _ = load_data()
-    responses_display = {'deaths':'Fallecimientos', 'total_casos':'Casos observados'}
-    response = st.selectbox('Respuesta',['deaths', 'total_casos'],format_func=lambda x: responses_display[x])
+    responses_display = {'deaths':'Fallecimientos', 'total_casos':'Casos observados','infected':'Infectados','hospit':'Hospitalizados','ingr_UCI':'Ingresados en UCI'}
+    response = st.selectbox('Respuesta',['deaths', 'total_casos', 'infected','hospit','ingr_UCI'],format_func=lambda x: responses_display[x])
     predict_df_full, response_df, days_fut_fmt = train_glm(response)
 
     spain_select = st.checkbox('Predicción estatal',['España','CCAA'],key='spain_select_glm')
@@ -666,7 +667,7 @@ if section_ind=='SEIR: Estudio a largo plazo':
     data_study = data_pob_agg[(data_pob_agg['dia'] >= '2020-03-21')].reset_index(drop=True)
     data_dia['curados'] = 2575 # El dato para el 21 de marzo está en el informe pero agregado y no por CCAA
     
-    T = 60
+    T = 120
 
     alfa = 0.14
     gamma = 0.06
@@ -706,8 +707,8 @@ if section_ind=='SEIR: Estudio a largo plazo':
     ax.plot(days_fut_fmt, extract_time(I), 'lightcoral', alpha=0.5, lw=3, label='Infected')
     ax.plot(days_fut_fmt, extract_time(R), 'lightgreen', alpha=0.5, lw=3, label='Recovered & Death')
     ax.plot(days_fut_fmt, extract_time(E), 'khaki', alpha=0.5, lw=3, label='Exposed')
-    ax.plot(days_fut_fmt, observed, 'darkred', alpha=0.5, lw=3, label='Infected (observed)')
-    ax.plot(days_fut_fmt, rd, 'darkgreen', alpha=0.5, lw=3, label='Recovered & Death (observed)')
+    ax.plot(days_fut_fmt, observed, 'darkred', marker='*', linestyle = 'None',alpha=0.5, lw=3, label='Infected (observed)')
+    ax.plot(days_fut_fmt, rd, 'darkgreen', marker='*', linestyle = 'None', alpha=0.5, lw=3, label='Recovered & Death (observed)')
     ax.set_xlabel('Time/days')
     ax.set_ylabel('People')
     ax.yaxis.set_tick_params(length=0)
