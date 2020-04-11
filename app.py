@@ -669,9 +669,9 @@ if section_ind=='SEIR: Estudio a largo plazo':
     
     T = 120
 
-    alfa = 0.14
+    alfa = 0.11
     gamma = 0.06
-    beta = 0.16
+    beta = 0.15
     beta_1 = 0.14
 
     t,S,E,I,R = SEIRRest(N = data_dia['pob'][0],
