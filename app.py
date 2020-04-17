@@ -389,7 +389,7 @@ if section_ind=='Informe diario':
     ax1.set_ylabel('Casos infectados (barras, diarios)', fontsize=20, color='grey')
     ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['total_casos'].diff()[1:], color='grey',label='Casos infectados')
     ax1.tick_params(axis='y')
-    ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['curados'].diff()[1:], color='green', label='Curados')
+    #ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['curados'].diff()[1:], color='green', label='Curados')
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
     ax2.set_ylabel('Fallecimientos (línea, diarios)', fontsize=20, color='red')  # we already handled the x-label with ax1
