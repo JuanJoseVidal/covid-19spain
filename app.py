@@ -783,6 +783,6 @@ if section_ind=='Acerca del proyecto':
     Mail: [francisco.morillas@uv.es](mailto:francisco.morillas@uv.es)  
     ''')
     st.markdown('''**José Valero Cuadra**  
-    C.U. en la Universitat Miguel Hernández.  
+    C.U. en la Universitad Miguel Hernández.  
     Mail: [jvalero@umh.es](mailto:jvalero@umh.es)  
     ''')
