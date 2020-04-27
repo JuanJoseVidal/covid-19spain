@@ -384,25 +384,25 @@ if section_ind=='Informe diario':
 
     st.markdown('## Evolución diaria.')
 
-    fig, ax1 = plt.subplots(figsize=(12,9))
-    ax1.set_xlabel('Día')
-    ax1.set_ylabel('Casos infectados (barras, diarios)', fontsize=20, color='grey')
-    ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['total_casos'].diff()[1:], color='grey',label='Casos infectados')
-    ax1.tick_params(axis='y')
-    #ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['curados'].diff()[1:], color='green', label='Curados')
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    # fig, ax1 = plt.subplots(figsize=(12,9))
+    # ax1.set_xlabel('Día')
+    # ax1.set_ylabel('Casos infectados (barras, diarios)', fontsize=20, color='grey')
+    # ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['total_casos'].diff()[1:], color='grey',label='Casos infectados')
+    # ax1.tick_params(axis='y')
+    # #ax1.bar(data_pob_agg['dia'][1:], data_pob_agg['curados'].diff()[1:], color='green', label='Curados')
+    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
-    ax2.set_ylabel('Fallecimientos (línea, diarios)', fontsize=20, color='red')  # we already handled the x-label with ax1
-    ax2.plot(data_pob_agg['dia'][1:], data_pob_agg['deaths'].diff()[1:], color='red', label='Fallecimientos')
-    ax2.tick_params(axis='y')
-    ax2.set_ylim(0)
+    # ax2.set_ylabel('Fallecimientos (línea, diarios)', fontsize=20, color='red')  # we already handled the x-label with ax1
+    # ax2.plot(data_pob_agg['dia'][1:], data_pob_agg['deaths'].diff()[1:], color='red', label='Fallecimientos')
+    # ax2.tick_params(axis='y')
+    # ax2.set_ylim(0)
 
-    lines, labels = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax2.legend(lines + lines2, labels + labels2, loc=0)
+    # lines, labels = ax1.get_legend_handles_labels()
+    # lines2, labels2 = ax2.get_legend_handles_labels()
+    # ax2.legend(lines + lines2, labels + labels2, loc=0)
 
-    fig.tight_layout() 
-    st.pyplot()
+    # fig.tight_layout() 
+    # st.pyplot()
 
     dia_select = [d for d in data_pob_agg['dia'][1:]]
     day_format_func = lambda x: x.strftime('%Y-%m-%d') 
