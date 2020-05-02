@@ -15,7 +15,7 @@ from patsy import dmatrices
 # Data wrangling
 @st.cache
 def load_data():
-    data = pd.read_excel('data/Covid-19_data.xlsx')
+    data = pd.read_excel('data/Covid-19_data_DD.xlsx')
     data = data.loc[data['to_study']=='Yes']
     data['day'] = [transform_day_glm(x) for x in data['dia']]
     rel = pd.read_excel('data/Relacion_CCAA_CPROV.xlsx',sheet_name='Rel_CCAA_Name')
@@ -23,7 +23,7 @@ def load_data():
     ccaa_dict = {c:i for c,i in zip(rel['CCAA_Name'],rel['CCAA'])}
     n_prov = len(ccaa_dict)
 
-    pob = pd.read_excel('data/Covid-19_data.xlsx',sheet_name='INE_Poblacion')
+    pob = pd.read_excel('data/Covid-19_data_DD.xlsx',sheet_name='INE_Poblacion')
     data_pob = data.merge(pob,on=['CCAA','CCAA_Name'],how='left')
     data_pob['pct_casos_pob'] = data_pob['total_casos']/data_pob['pob']
     data_pob['pct_death_casos'] = data_pob['deaths']/data_pob['total_casos']
@@ -47,10 +47,12 @@ def load_map():
     return mapa
 
 def transform_day_glm(d):
-    if d.month <= 3:
+    if d.month == 3:
         return d.day
-    else:
+    elif d.month == 4:
         return d.day + 31
+    else:
+        return d.day + 31 + 30
 
 def extract_diffs(var, dia_study):
     dia_study_ant = dia_study - datetime.timedelta(days=1)
@@ -118,13 +120,13 @@ def deriv(y, t, N, beta, gamma):
     return dSdt, dIdt, dRdt
 
 def predict_model(res,ca,day):
-    pred = [1] + list(np.repeat(0,16)) + [1,0]
+    pred = [1] + list(np.repeat(0,16)) + [0,0,1]
     pred[ccaa_dict[ca]-1] = 1
     if ca == 'Madrid':
-        pred = pred + [1,1,0]
+        pred = pred + [1,0,0,1]
     else:
-        pred = pred + [0,0,0]
-    pred = pred + [day**2] + [day**3] + [day]
+        pred = pred + [0,0,0,0]
+    pred = pred + [day**2] + [day**3] + [day**4] + [day]
     pred = pred + [p*day for p in pred[1:17]]
     return res.predict(pred)
     
@@ -145,7 +147,7 @@ def train_glm(response):
                 data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
 
             # Model
-            y, X = dmatrices(f'{response} ~ I(day**2) + I(day**3) + C(CCAA)*day + C(confin_str)*C(madrid)', data=data_red, return_type='dataframe')
+            y, X = dmatrices(f'{response} ~ I(day**2) + I(day**3) + I(day**4) + C(CCAA)*day + C(confin_str)*C(madrid)', data=data_red, return_type='dataframe')
 
             mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
             res.append(mod.fit())
@@ -783,6 +785,6 @@ if section_ind=='Acerca del proyecto':
     Mail: [francisco.morillas@uv.es](mailto:francisco.morillas@uv.es)  
     ''')
     st.markdown('''**José Valero Cuadra**  
-    C.U. en la Universitad Miguel Hernández.  
+    C.U. en la Universitat Miguel Hernández.  
     Mail: [jvalero@umh.es](mailto:jvalero@umh.es)  
     ''')
