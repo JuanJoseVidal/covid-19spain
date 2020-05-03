@@ -37,6 +37,7 @@ def load_data():
 def load_data_sexage():
     data_sexage = pd.read_excel('data/Covid-19_data_sexage.xlsx')
     data_sexage = data_sexage.query('gender!="Tot"')
+    data_sexage = data_sexage.loc[data_sexage['dia'] >= data_sexage['dia'].max() - datetime.timedelta(days=20)]
     return data_sexage
 
 @st.cache
