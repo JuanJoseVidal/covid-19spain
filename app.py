@@ -127,7 +127,10 @@ def predict_model(res,ca,day):
         pred = pred + [1,0,0,1]
     else:
         pred = pred + [0,0,0,0]
-    pred = pred + [day**2] + [day**3] + [day**4] + [day]
+    
+    pred = pred + [day**2] + [day**3] 
+    pred = pred + [p*day**3 for p in pred[1:17]]
+    pred = pred + [day**4] + [day]
     pred = pred + [p*day for p in pred[1:17]]
     return res.predict(pred)
     
@@ -148,7 +151,7 @@ def train_glm(response):
                 data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
 
             # Model
-            y, X = dmatrices(f'{response} ~ I(day**2) + I(day**3) + I(day**4) + C(CCAA)*day + C(confin_str)*C(madrid)', data=data_red, return_type='dataframe')
+            y, X = dmatrices(f'{response} ~ I(day**2) + C(CCAA)*I(day**3) + I(day**4) + C(CCAA)*day + C(confin_str)*C(madrid)', data=data_red, return_type='dataframe')
 
             mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
             res.append(mod.fit())
