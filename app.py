@@ -123,7 +123,7 @@ def deriv(y, t, N, beta, gamma):
 def predict_model(res,ca,day):
     pred = [1] + list(np.repeat(0,16)) + [0,0,1]
     pred[ccaa_dict[ca]-1] = 1
-    if ca == 'Madrid':
+    if ca in ['Madrid','País Vasco','La Rioja']:
         pred = pred + [1,0,0,1]
     else:
         pred = pred + [0,0,0,0]
@@ -151,7 +151,7 @@ def train_glm(response):
                 data_red = data.loc[data['dia']<np.sort(data['dia'].unique())[-n_days_test]]
 
             # Model
-            y, X = dmatrices(f'{response} ~ I(day**2) + C(CCAA)*I(day**3) + I(day**4) + C(CCAA)*day + C(confin_str)*C(madrid)', data=data_red, return_type='dataframe')
+            y, X = dmatrices(f'{response} ~ I(day**2) + C(CCAA)*I(day**3) + I(day**4) + C(CCAA)*day + C(confin_str)*C(early_ccaa)', data=data_red, return_type='dataframe')
 
             mod = sm.GLM(y, X, family=sm.families.Poisson(), link=sm.families.links.logit)
             res.append(mod.fit())
