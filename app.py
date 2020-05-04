@@ -94,7 +94,7 @@ def plot_letality_gender(gend):
     legend.get_frame().set_alpha(0.5)
     plt.title('Letalidad acumulada por día para {} según edad.'.format("hombres" if gend =='Masc' else "mujeres"))
     st.pyplot()
-
+ 
 def color_red(val):
     """
     Takes a scalar and returns a string with
