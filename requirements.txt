@@ -5,7 +5,7 @@ matplotlib==3.1.1
 statsmodels==0.10.1
 patsy==0.5.1
 xlrd>=1.2.0
-scipy==1.4.1
+scipy==1.10.0
 geopandas==0.4.1
 mapclassify==2.0.1
 descartes==1.1.0
